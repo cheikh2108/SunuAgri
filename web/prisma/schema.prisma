@@ -1,0 +1,655 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── ENUMS ────────────────────────────────────────────────────────────────────
+
+enum ProfileType {
+  OWNER        // propriétaire foncier
+  PRODUCER     // producteur / exploitant
+  BUYER        // acheteur
+  INVESTOR     // investisseur
+  PROVIDER     // prestataire agricole
+  AGENT        // agent SunuAgri
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum VerificationLevel {
+  NONE
+  PHONE_VERIFIED
+  EMAIL_VERIFIED
+  ID_VERIFIED
+  ORG_VERIFIED
+  LOCATION_VERIFIED
+  FIELD_VISITED
+}
+
+enum FieldOperationType {
+  SEASONAL_RENT
+  ANNUAL_RENT
+  LONG_TERM_RENT
+  SALE
+  SHARECROPPING
+  HARVEST_SHARE
+  EXPLOITATION_PARTNERSHIP
+  INVESTOR_SEARCH
+  CONVENTIONAL_PROVISION
+}
+
+enum LandDocumentType {
+  TITLE_DEED
+  LEASE
+  DELIBERATION
+  ATTRIBUTION_CERTIFICATE
+  ADMINISTRATIVE_ACT
+  CUSTOMARY_DOCUMENT
+  CONTRACT
+  NO_FORMAL_DOCUMENT
+}
+
+enum FieldVerificationLevel {
+  UNVERIFIED
+  OWNER_ID_VERIFIED
+  LOCATION_VERIFIED
+  DOCUMENTS_REVIEWED
+  FIELD_VISITED
+  SUNUAGRI_VERIFIED
+}
+
+enum ListingStatus {
+  DRAFT
+  PENDING_VALIDATION
+  PUBLISHED
+  REJECTED
+  EXPIRED
+  SUSPENDED
+  ARCHIVED
+}
+
+enum VisitRequestStatus {
+  REQUESTED
+  ACCEPTED
+  REFUSED
+  RESCHEDULED
+  COMPLETED
+}
+
+enum OfferStatus {
+  PENDING
+  ACCEPTED
+  REFUSED
+  COUNTER_PROPOSED
+  CANCELLED
+}
+
+enum PartnershipType {
+  PROFIT_SHARING
+  HARVEST_SHARING
+  JOINT_EXPLOITATION
+  POST_HARVEST_RENT
+  EQUIPMENT_FINANCING
+  PRODUCTION_CONTRACT
+}
+
+enum ProductionOfferType {
+  AVAILABLE_NOW
+  HARVEST_IN_PROGRESS
+  AVAILABLE_SOON
+  PRE_ORDER
+  WHOLESALE
+  RETAIL
+  SUPPLY_CONTRACT
+  PROCESSED_PRODUCT
+  ORGANIC_CERTIFIED
+}
+
+enum TransactionStatus {
+  REQUEST_SENT
+  REQUEST_RECEIVED
+  IN_DISCUSSION
+  VISIT_SCHEDULED
+  OFFER_TRANSMITTED
+  COUNTER_PROPOSAL
+  OFFER_ACCEPTED
+  CONTRACT_PREPARATION
+  PAYMENT_PENDING
+  COMPLETED
+  CANCELLED
+  DISPUTE_REPORTED
+}
+
+enum NotificationChannel {
+  IN_APP
+  SMS
+  EMAIL
+}
+
+enum ReportMotif {
+  FALSE_LISTING
+  FALSE_OWNER
+  SUSPICIOUS_DOCUMENTS
+  SCAM_ATTEMPT
+  NON_COMPLIANT_PRODUCT
+  ABUSIVE_BEHAVIOR
+  SUSPICIOUS_ACCOUNT
+  USER_DISPUTE
+}
+
+enum ReportStatus {
+  PENDING
+  UNDER_REVIEW
+  RESOLVED
+  DISMISSED
+}
+
+// ─── ACCOUNTS ─────────────────────────────────────────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  phone         String?   @unique
+  email         String?   @unique
+  passwordHash  String?
+  isActive      Boolean   @default(true)
+  isSuspended   Boolean   @default(false)
+  suspendedAt   DateTime?
+  suspendReason String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  profiles      Profile[]
+  otpCodes      OtpCode[]
+  sessions      Session[]
+
+  // Détection anti-contournement de suspension
+  deviceFingerprints DeviceFingerprint[]
+
+  createdByAgentId String?
+  createdByAgent   Profile? @relation("AgentCreatedUsers", fields: [createdByAgentId], references: [id])
+
+  @@index([phone])
+  @@index([email])
+}
+
+model Profile {
+  id               String            @id @default(cuid())
+  userId           String
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type             ProfileType
+  displayName      String
+  photoUrl         String?
+  bio              String?
+  region           String?
+  department       String?
+  commune          String?
+  locality         String?
+  // Téléphone masqué par défaut — affiché seulement avec autorisation explicite
+  phoneVisible     Boolean           @default(false)
+  activityArea     String?
+  verificationLevels VerificationLevel[] @default([NONE])
+  avgResponseHours Float?
+  isActive         Boolean           @default(true)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  fields           Field[]
+  productions      Production[]
+  visitRequests    VisitRequest[]    @relation("VisitorRequests")
+  offersReceived   Offer[]           @relation("OfferTarget")
+  offersSent       Offer[]           @relation("OfferSender")
+  purchaseRequests PurchaseRequest[]
+  supplyNeeds      SupplyNeed[]
+  sentMessages     Message[]         @relation("MessageSender")
+  conversations    ConversationParticipant[]
+  notifications    Notification[]
+  favorites        Favorite[]
+  reviewsGiven     Review[]          @relation("ReviewAuthor")
+  reviewsReceived  Review[]          @relation("ReviewTarget")
+  reports          Report[]          @relation("ReportAuthor")
+  reportedProfiles Report[]          @relation("ReportedProfile")
+  usersCreatedAsAgent User[]         @relation("AgentCreatedUsers")
+
+  @@unique([userId, type])
+  @@index([userId])
+  @@index([type])
+  @@index([region, commune])
+}
+
+model OtpCode {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  code      String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  revokedAt DateTime?
+
+  @@index([token])
+  @@index([userId])
+}
+
+model DeviceFingerprint {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  hash      String
+  createdAt DateTime @default(now())
+
+  @@index([hash])
+  @@index([userId])
+}
+
+// ─── MODULE FONCIER ───────────────────────────────────────────────────────────
+
+model Field {
+  id                  String                @id @default(cuid())
+  profileId           String
+  profile             Profile               @relation(fields: [profileId], references: [id])
+  title               String
+  description         String
+  operationType       FieldOperationType
+  status              ListingStatus         @default(DRAFT)
+  verificationLevel   FieldVerificationLevel @default(UNVERIFIED)
+
+  // Localisation — position exacte masquée jusqu'à acceptation d'une demande de visite
+  region              String
+  department          String?
+  commune             String
+  locality            String?
+  latitude            Float?
+  longitude           Float?
+
+  // Superficie
+  areaSqm             Float
+  areaUnit            String                @default("ha")
+
+  // Prix
+  price               Float?
+  currency            String                @default("XOF")
+  isPriceNegotiable   Boolean               @default(false)
+  paymentConditions   String?
+  rentalDurationDays  Int?
+  availableFrom       DateTime?
+
+  // Caractéristiques agronomiques
+  soilType            String?
+  suitableCrops       String[]
+  waterAvailability   Boolean               @default(false)
+  hasIrrigation       Boolean               @default(false)
+  hasRoadAccess       Boolean               @default(false)
+  hasElectricity      Boolean               @default(false)
+  hasFencing          Boolean               @default(false)
+  hasBuildings        Boolean               @default(false)
+  specialConditions   String?
+
+  expiresAt           DateTime?
+  publishedAt         DateTime?
+  rejectionReason     String?
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+
+  documents           FieldDocument[]
+  medias              FieldMedia[]
+  visitRequests       VisitRequest[]
+  offers              Offer[]
+  favorites           Favorite[]
+  reports             Report[]              @relation("ReportedField")
+
+  @@index([profileId])
+  @@index([status])
+  @@index([region, commune])
+  @@index([operationType])
+  @@index([price])
+}
+
+model FieldDocument {
+  id           String           @id @default(cuid())
+  fieldId      String
+  field        Field            @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+  documentType LandDocumentType
+  fileUrl      String
+  fileName     String
+  uploadedAt   DateTime         @default(now())
+
+  @@index([fieldId])
+}
+
+model FieldMedia {
+  id         String   @id @default(cuid())
+  fieldId    String
+  field      Field    @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+  url        String
+  mediaType  String   // "image" | "video"
+  orderIndex Int      @default(0)
+  uploadedAt DateTime @default(now())
+
+  @@index([fieldId])
+}
+
+model VisitRequest {
+  id              String             @id @default(cuid())
+  fieldId         String
+  field           Field              @relation(fields: [fieldId], references: [id])
+  visitorProfileId String
+  visitorProfile  Profile            @relation("VisitorRequests", fields: [visitorProfileId], references: [id])
+  status          VisitRequestStatus @default(REQUESTED)
+  requestedDate   DateTime
+  visitorCount    Int                @default(1)
+  message         String?
+  needsAgentHelp  Boolean            @default(false)
+  responseMessage String?
+  scheduledAt     DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  @@index([fieldId])
+  @@index([visitorProfileId])
+  @@index([status])
+}
+
+model Offer {
+  id              String          @id @default(cuid())
+  fieldId         String
+  field           Field           @relation(fields: [fieldId], references: [id])
+  senderProfileId String
+  senderProfile   Profile         @relation("OfferSender", fields: [senderProfileId], references: [id])
+  targetProfileId String
+  targetProfile   Profile         @relation("OfferTarget", fields: [targetProfileId], references: [id])
+  status          OfferStatus     @default(PENDING)
+  amount          Float
+  currency        String          @default("XOF")
+  durationDays    Int?
+  startDate       DateTime?
+  paymentMode     String?
+  agriculturalProject String?
+  plannedCrops    String[]
+  specialConditions String?
+  partnershipType PartnershipType?
+  counterAmount   Float?
+  responseMessage String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  transaction     Transaction?
+
+  @@index([fieldId])
+  @@index([senderProfileId])
+  @@index([targetProfileId])
+  @@index([status])
+}
+
+// ─── MODULE MARCHÉ ────────────────────────────────────────────────────────────
+
+model Production {
+  id                  String              @id @default(cuid())
+  profileId           String
+  profile             Profile             @relation(fields: [profileId], references: [id])
+  name                String
+  category            String
+  variety             String?
+  offerType           ProductionOfferType
+  status              ListingStatus       @default(DRAFT)
+
+  quantityAvailable   Float
+  quantityUnit        String
+  minOrderQuantity    Float?
+  price               Float
+  currency            String              @default("XOF")
+  isPriceNegotiable   Boolean             @default(false)
+
+  quality             String?
+  caliber             String?
+  productionMode      String?
+  harvestDate         DateTime?
+  availableFrom       DateTime?
+  availableUntil      DateTime?
+
+  region              String
+  department          String?
+  commune             String?
+  storageConditions   String?
+  deliveryModes       String[]
+
+  expiresAt           DateTime?
+  publishedAt         DateTime?
+  rejectionReason     String?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  medias              ProductionMedia[]
+  purchaseRequests    PurchaseRequest[]
+  favorites           Favorite[]
+  reports             Report[]            @relation("ReportedProduction")
+
+  @@index([profileId])
+  @@index([status])
+  @@index([category])
+  @@index([region])
+  @@index([quantityAvailable])
+}
+
+model ProductionMedia {
+  id           String     @id @default(cuid())
+  productionId String
+  production   Production @relation(fields: [productionId], references: [id], onDelete: Cascade)
+  url          String
+  mediaType    String
+  orderIndex   Int        @default(0)
+  uploadedAt   DateTime   @default(now())
+
+  @@index([productionId])
+}
+
+model PurchaseRequest {
+  id               String            @id @default(cuid())
+  productionId     String
+  production       Production        @relation(fields: [productionId], references: [id])
+  buyerProfileId   String
+  buyerProfile     Profile           @relation(fields: [buyerProfileId], references: [id])
+  status           OfferStatus       @default(PENDING)
+  quantity         Float
+  proposedPrice    Float?
+  currency         String            @default("XOF")
+  desiredDate      DateTime?
+  deliveryLocation String?
+  frequency        String?
+  qualityRequirements String?
+  paymentConditions String?
+  responseMessage  String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  transaction      Transaction?
+
+  @@index([productionId])
+  @@index([buyerProfileId])
+  @@index([status])
+}
+
+model SupplyNeed {
+  id               String    @id @default(cuid())
+  profileId        String
+  profile          Profile   @relation(fields: [profileId], references: [id])
+  product          String
+  category         String
+  quantity         Float
+  quantityUnit     String
+  quality          String?
+  frequency        String?
+  budget           Float?
+  currency         String    @default("XOF")
+  deadline         DateTime?
+  deliveryLocation String?
+  paymentConditions String?
+  status           ListingStatus @default(PUBLISHED)
+  expiresAt        DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([profileId])
+  @@index([category])
+  @@index([status])
+}
+
+// ─── TRANSVERSAL ──────────────────────────────────────────────────────────────
+
+model Transaction {
+  id                String            @id @default(cuid())
+  status            TransactionStatus @default(REQUEST_SENT)
+  offerId           String?           @unique
+  offer             Offer?            @relation(fields: [offerId], references: [id])
+  purchaseRequestId String?           @unique
+  purchaseRequest   PurchaseRequest?  @relation(fields: [purchaseRequestId], references: [id])
+  confirmedBySeller Boolean           @default(false)
+  confirmedByBuyer  Boolean           @default(false)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  // Historique immuable des échanges importants (cf. règle §9.10)
+  history           TransactionEvent[]
+
+  @@index([status])
+}
+
+model TransactionEvent {
+  id            String      @id @default(cuid())
+  transactionId String
+  transaction   Transaction @relation(fields: [transactionId], references: [id])
+  eventType     String
+  payload       Json
+  createdAt     DateTime    @default(now())
+
+  @@index([transactionId])
+}
+
+model Conversation {
+  id           String                    @id @default(cuid())
+  createdAt    DateTime                  @default(now())
+  updatedAt    DateTime                  @updatedAt
+  participants ConversationParticipant[]
+  messages     Message[]
+}
+
+model ConversationParticipant {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  profileId      String
+  profile        Profile      @relation(fields: [profileId], references: [id])
+  joinedAt       DateTime     @default(now())
+  isBlocked      Boolean      @default(false)
+
+  @@unique([conversationId, profileId])
+  @@index([profileId])
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  senderProfileId String
+  senderProfile  Profile      @relation("MessageSender", fields: [senderProfileId], references: [id])
+  content        String?
+  attachmentUrl  String?
+  attachmentType String?
+  isRead         Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId])
+  @@index([senderProfileId])
+}
+
+model Notification {
+  id        String              @id @default(cuid())
+  profileId String
+  profile   Profile             @relation(fields: [profileId], references: [id])
+  channel   NotificationChannel
+  type      String
+  title     String
+  body      String
+  payload   Json?
+  isRead    Boolean             @default(false)
+  sentAt    DateTime?
+  createdAt DateTime            @default(now())
+
+  @@index([profileId])
+  @@index([isRead])
+}
+
+model Favorite {
+  id           String      @id @default(cuid())
+  profileId    String
+  profile      Profile     @relation(fields: [profileId], references: [id])
+  fieldId      String?
+  field        Field?      @relation(fields: [fieldId], references: [id])
+  productionId String?
+  production   Production? @relation(fields: [productionId], references: [id])
+  createdAt    DateTime    @default(now())
+
+  @@unique([profileId, fieldId])
+  @@unique([profileId, productionId])
+  @@index([profileId])
+}
+
+model Review {
+  id             String   @id @default(cuid())
+  authorProfileId String
+  authorProfile  Profile  @relation("ReviewAuthor", fields: [authorProfileId], references: [id])
+  targetProfileId String
+  targetProfile  Profile  @relation("ReviewTarget", fields: [targetProfileId], references: [id])
+  transactionId  String?
+  reliability    Int      // 1-5
+  conformity     Int
+  punctuality    Int
+  communication  Int
+  commitment     Int
+  comment        String?
+  isModerated    Boolean  @default(false)
+  publishedAt    DateTime?
+  createdAt      DateTime @default(now())
+
+  @@index([targetProfileId])
+  @@index([authorProfileId])
+}
+
+model Report {
+  id                 String       @id @default(cuid())
+  authorProfileId    String
+  authorProfile      Profile      @relation("ReportAuthor", fields: [authorProfileId], references: [id])
+  motif              ReportMotif
+  description        String
+  status             ReportStatus @default(PENDING)
+  reportedProfileId  String?
+  reportedProfile    Profile?     @relation("ReportedProfile", fields: [reportedProfileId], references: [id])
+  reportedFieldId    String?
+  reportedField      Field?       @relation("ReportedField", fields: [reportedFieldId], references: [id])
+  reportedProductionId String?
+  reportedProduction Production?  @relation("ReportedProduction", fields: [reportedProductionId], references: [id])
+  attachmentUrl      String?
+  resolvedAt         DateTime?
+  resolvedBy         String?
+  resolutionNote     String?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  @@index([status])
+  @@index([authorProfileId])
+}

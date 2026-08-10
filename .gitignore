@@ -1,0 +1,51 @@
+# === web (Next.js) ===
+web/node_modules
+web/.pnp
+web/.pnp.*
+web/.yarn/*
+!web/.yarn/patches
+!web/.yarn/plugins
+!web/.yarn/releases
+!web/.yarn/versions
+web/.next/
+web/out/
+web/build
+web/.vercel
+web/*.tsbuildinfo
+web/next-env.d.ts
+web/app/generated/prisma
+web/.env*
+web/coverage
+
+# === mobile (Expo) ===
+mobile/node_modules
+mobile/.expo/
+mobile/dist/
+mobile/web-build/
+mobile/expo-env.d.ts
+mobile/.kotlin/
+mobile/*.orig.*
+mobile/*.jks
+mobile/*.p8
+mobile/*.p12
+mobile/*.key
+mobile/*.mobileprovision
+mobile/.metro-health-check*
+mobile/*.tsbuildinfo
+mobile/.env*
+mobile/.env*.local
+mobile/ios/
+mobile/android/
+
+# === commun ===
+.DS_Store
+*.pem
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# === AI assistant (exclus du repo) ===
+.claude/
+.agents/
+.windsurf/
+skills-lock.json
