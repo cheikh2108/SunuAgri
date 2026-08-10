@@ -44,6 +44,10 @@ npm-debug.*
 yarn-debug.*
 yarn-error.*
 
+# === docs locaux (exclus du repo) ===
+CLAUDE.md
+SPEC.md
+
 # === AI assistant (exclus du repo) ===
 .claude/
 .agents/
