@@ -37,7 +37,7 @@ SunuAgri/
 cd web
 npm install
 cp .env.example .env.local   # compléter les valeurs
-npx prisma migrate dev
+npx prisma generate           # génère le client Prisma à partir du schéma
 npm run dev
 ```
 
