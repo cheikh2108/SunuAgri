@@ -36,7 +36,7 @@ SunuAgri/
 ```bash
 cd web
 npm install
-cp .env.example .env.local   # renseigner DATABASE_URL, JWT_SECRET, etc.
+cp .env.example .env.local   # compléter les valeurs
 npx prisma migrate dev
 npm run dev
 ```
