@@ -15,6 +15,7 @@ web/*.tsbuildinfo
 web/next-env.d.ts
 web/app/generated/prisma
 web/.env*
+!web/.env.example
 web/coverage
 
 # === mobile (Expo) ===
@@ -33,6 +34,7 @@ mobile/*.mobileprovision
 mobile/.metro-health-check*
 mobile/*.tsbuildinfo
 mobile/.env*
+!mobile/.env.example
 mobile/.env*.local
 mobile/ios/
 mobile/android/
