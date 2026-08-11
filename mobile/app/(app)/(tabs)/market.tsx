@@ -1,15 +1,9 @@
 import React, { useEffect, useState } from "react";
-import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet,
-  Pressable,
-  ActivityIndicator,
-} from "react-native";
+import { View, Text, ScrollView, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 import { apiFetch } from "../../../src/lib/api";
-import { colors, spacing, fontSize, fontWeight, radius } from "../../../src/lib/tokens";
+import { ImageCard, SearchBar, SkeletonCard, EmptyState } from "../../../src/components";
+import { colors, spacing, fontSize, fontWeight } from "../../../src/lib/tokens";
 
 interface Production {
   id: string;
@@ -37,17 +31,37 @@ const OFFER_LABELS: Record<string, string> = {
 
 export default function MarketScreen() {
   const [productions, setProductions] = useState<Production[]>([]);
+  const [filteredProductions, setFilteredProductions] = useState<Production[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const router = useRouter();
 
   useEffect(() => {
     apiFetch<{ data: Production[] }>("/api/productions").then(({ data, error: err }) => {
       if (err) setError(err);
-      else setProductions(data?.data ?? []);
+      else {
+        setProductions(data?.data ?? []);
+        setFilteredProductions(data?.data ?? []);
+      }
       setLoading(false);
     });
   }, []);
+
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setFilteredProductions(productions);
+      return;
+    }
+    const query = searchQuery.toLowerCase();
+    const filtered = productions.filter(
+      (p) =>
+        p.name.toLowerCase().includes(query) ||
+        p.category.toLowerCase().includes(query) ||
+        p.region.toLowerCase().includes(query)
+    );
+    setFilteredProductions(filtered);
+  }, [searchQuery, productions]);
 
   return (
     <View style={styles.screen}>
@@ -56,48 +70,49 @@ export default function MarketScreen() {
         <Text style={styles.sub}>Productions disponibles</Text>
       </View>
 
+      <SearchBar
+        value={searchQuery}
+        onChangeText={setSearchQuery}
+        showFilter
+        onFilterPress={() => {}}
+      />
+
       {loading ? (
-        <ActivityIndicator color={colors.secondary} style={{ marginTop: 48 }} />
+        <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+        </ScrollView>
       ) : error ? (
-        <Text style={styles.errorText}>{error}</Text>
-      ) : productions.length === 0 ? (
-        <View style={styles.empty}>
-          <Text style={styles.emptyText}>Aucune production disponible</Text>
-        </View>
+        <EmptyState
+          icon="alert-circle-outline"
+          title="Erreur de chargement"
+          description={error}
+        />
+      ) : filteredProductions.length === 0 ? (
+        <EmptyState
+          icon="search-outline"
+          title={searchQuery ? "Aucun résultat" : "Aucune production disponible"}
+          description={searchQuery ? "Essayez avec d'autres mots-clés" : "Revenez plus tard pour voir les nouvelles offres"}
+        />
       ) : (
         <ScrollView
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
         >
-          {productions.map((p) => (
-            <Pressable
+          {filteredProductions.map((p) => (
+            <ImageCard
               key={p.id}
-              style={({ pressed }) => [styles.card, pressed && { opacity: 0.75 }]}
+              title={p.name}
+              subtitle={p.category}
+              badge={OFFER_LABELS[p.offerType] ?? p.offerType}
+              badgeVariant="secondary"
+              location={p.region}
+              metadata={`${p.quantityAvailable} ${p.quantityUnit}`}
+              price={`${p.price.toLocaleString("fr-SN")} F / ${p.quantityUnit}`}
+              owner={p.profile.displayName}
               onPress={() => router.push(`/(app)/production/${p.id}`)}
-              accessibilityRole="button"
-              accessibilityLabel={`${p.name}, ${p.quantityAvailable} ${p.quantityUnit}`}
-            >
-              <View style={styles.cardAccent} />
-              <View style={styles.cardBody}>
-                <View style={styles.cardRow}>
-                  <Text style={styles.cardTitle} numberOfLines={1}>{p.name}</Text>
-                  <Text style={styles.cardBadge}>
-                    {OFFER_LABELS[p.offerType] ?? p.offerType}
-                  </Text>
-                </View>
-                <Text style={styles.cardCategory}>{p.category}</Text>
-                <Text style={styles.cardLocation}>📍 {p.region}</Text>
-                <View style={styles.cardFooter}>
-                  <Text style={styles.cardQty}>
-                    {p.quantityAvailable} {p.quantityUnit}
-                  </Text>
-                  <Text style={styles.cardPrice}>
-                    {p.price.toLocaleString("fr-SN")} F / {p.quantityUnit}
-                  </Text>
-                </View>
-                <Text style={styles.cardOwner}>Par {p.profile.displayName}</Text>
-              </View>
-            </Pressable>
+            />
           ))}
         </ScrollView>
       )}
@@ -131,91 +146,6 @@ const styles = StyleSheet.create({
   list: {
     padding: spacing.base,
     gap: spacing.md,
-  },
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    flexDirection: "row",
-    overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  cardAccent: {
-    width: 4,
-    backgroundColor: colors.secondary,
-  },
-  cardBody: {
-    flex: 1,
-    padding: spacing.md,
-    gap: spacing.xs,
-  },
-  cardRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    gap: spacing.sm,
-  },
-  cardTitle: {
-    flex: 1,
-    fontSize: fontSize.base,
-    fontWeight: fontWeight.semibold,
-    color: colors.text,
-  },
-  cardBadge: {
-    fontSize: 10,
-    fontWeight: fontWeight.semibold,
-    color: colors.secondary,
-    backgroundColor: colors.warningLight,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: radius.sm,
-    overflow: "hidden",
-  },
-  cardCategory: {
-    fontSize: fontSize.xs,
-    color: colors.textMuted,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  cardLocation: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-  },
-  cardFooter: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 2,
-  },
-  cardQty: {
-    fontSize: fontSize.sm,
-    color: colors.textMuted,
-  },
-  cardPrice: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.bold,
-    color: colors.text,
-  },
-  cardOwner: {
-    fontSize: fontSize.xs,
-    color: colors.textMuted,
-  },
-  empty: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingTop: 80,
-  },
-  emptyText: {
-    fontSize: fontSize.base,
-    color: colors.textMuted,
-  },
-  errorText: {
-    textAlign: "center",
-    marginTop: 48,
-    color: colors.destructive,
-    fontSize: fontSize.sm,
+    paddingBottom: spacing.xl,
   },
 });

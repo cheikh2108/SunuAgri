@@ -9,7 +9,9 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { apiFetch } from "../../../src/lib/api";
+import { EmptyState, SkeletonLoader } from "../../../src/components";
 import { colors, spacing, fontSize, fontWeight, radius } from "../../../src/lib/tokens";
+import { Ionicons } from "@expo/vector-icons";
 
 interface Conversation {
   id: string;
@@ -37,14 +39,23 @@ export default function MessagesScreen() {
       </View>
 
       {loading ? (
-        <ActivityIndicator color={colors.primary} style={{ marginTop: 48 }} />
-      ) : conversations.length === 0 ? (
-        <View style={styles.empty}>
-          <Text style={styles.emptyText}>Aucune conversation</Text>
-          <Text style={styles.emptySub}>
-            Contactez un propriétaire ou producteur pour démarrer
-          </Text>
+        <View style={{ padding: spacing.base, gap: spacing.md }}>
+          {[1, 2, 3, 4].map((i) => (
+            <View key={i} style={styles.item}>
+              <SkeletonLoader width={44} height={44} borderRadius={radius.full} />
+              <View style={{ flex: 1, gap: spacing.xs }}>
+                <SkeletonLoader width="60%" height={16} />
+                <SkeletonLoader width="80%" height={14} />
+              </View>
+            </View>
+          ))}
         </View>
+      ) : conversations.length === 0 ? (
+        <EmptyState
+          icon="chatbubbles-outline"
+          title="Aucune conversation"
+          description="Contactez un propriétaire ou producteur pour démarrer une discussion"
+        />
       ) : (
         <ScrollView contentContainerStyle={styles.list}>
           {conversations.map((c) => {
@@ -58,9 +69,7 @@ export default function MessagesScreen() {
                 accessibilityRole="button"
               >
                 <View style={styles.avatar}>
-                  <Text style={styles.avatarText}>
-                    {other[0]?.toUpperCase() ?? "?"}
-                  </Text>
+                  <Ionicons name="person" size={20} color={colors.primary} />
                 </View>
                 <View style={styles.info}>
                   <Text style={styles.name}>{other}</Text>

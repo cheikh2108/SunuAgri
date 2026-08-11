@@ -10,8 +10,9 @@ import {
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { apiFetch } from "../../../src/lib/api";
-import { Button } from "../../../src/components/Button";
+import { Button, ImageGallery, Badge, SkeletonLoader } from "../../../src/components";
 import { colors, spacing, fontSize, fontWeight, radius } from "../../../src/lib/tokens";
+import { Ionicons } from "@expo/vector-icons";
 
 interface ProductionDetail {
   id: string;
@@ -34,6 +35,7 @@ interface ProductionDetail {
     displayName: string;
     verificationLevels: string[];
   };
+  medias?: { url: string; mediaType: string }[];
 }
 
 const OFFER_LABELS: Record<string, string> = {
@@ -80,8 +82,15 @@ export default function ProductionDetailScreen() {
 
   if (loading) {
     return (
-      <View style={styles.loading}>
-        <ActivityIndicator color={colors.secondary} size="large" />
+      <View style={styles.screen}>
+        <View style={{ height: 280, backgroundColor: colors.border }}>
+          <SkeletonLoader width="100%" height={280} borderRadius={0} />
+        </View>
+        <View style={{ padding: spacing.base, gap: spacing.md }}>
+          <SkeletonLoader width="80%" height={24} />
+          <SkeletonLoader width="60%" height={16} />
+          <SkeletonLoader width="100%" height={100} />
+        </View>
       </View>
     );
   }
@@ -95,24 +104,44 @@ export default function ProductionDetailScreen() {
   }
 
   const isVerified = prod.profile.verificationLevels.includes("ID_VERIFIED");
+  const imageUrls = prod.medias?.filter((m) => m.mediaType === "image").map((m) => m.url) ?? [];
 
   return (
     <View style={styles.screen}>
       <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={styles.hero}>
-          <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={12} accessibilityLabel="Retour">
-            <Text style={styles.backIcon}>←</Text>
-          </Pressable>
-          <View style={styles.heroBadge}>
-            <Text style={styles.heroBadgeText}>{OFFER_LABELS[prod.offerType] ?? prod.offerType}</Text>
-          </View>
-          <Text style={styles.heroTitle}>{prod.name}</Text>
-          <Text style={styles.heroSub}>
-            {prod.category}{prod.variety ? ` · ${prod.variety}` : ""} · 📍 {prod.region}
-          </Text>
-        </View>
+        {/* Galerie d'images */}
+        <ImageGallery images={imageUrls} placeholder="production" />
 
-        <View style={styles.body}>
+        {/* Bouton retour flottant */}
+        <Pressable
+          onPress={() => router.back()}
+          style={styles.floatingBackBtn}
+          hitSlop={12}
+          accessibilityLabel="Retour"
+        >
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
+        </Pressable>
+
+        <View style={styles.content}>
+          {/* Header */}
+          <View style={styles.header}>
+            <View style={{ flex: 1 }}>
+              <Badge
+                label={OFFER_LABELS[prod.offerType] ?? prod.offerType}
+                variant="secondary"
+                size="md"
+                style={{ alignSelf: "flex-start", marginBottom: spacing.sm }}
+              />
+              <Text style={styles.title}>{prod.name}</Text>
+              <Text style={styles.subtitle}>
+                {prod.category}{prod.variety ? ` · ${prod.variety}` : ""}
+              </Text>
+              <View style={styles.locationRow}>
+                <Ionicons name="location-outline" size={16} color={colors.textSecondary} />
+                <Text style={styles.location}>{prod.region}</Text>
+              </View>
+            </View>
+          </View>
           {/* Prix & quantité */}
           <View style={styles.statsRow}>
             <View style={styles.stat}>
@@ -217,27 +246,50 @@ const detailStyles = StyleSheet.create({
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
-  loading: { flex: 1, alignItems: "center", justifyContent: "center" },
-  hero: {
-    backgroundColor: colors.secondary,
-    paddingTop: 52,
-    paddingBottom: spacing.xl,
-    paddingHorizontal: spacing.base,
-    gap: spacing.sm,
-  },
-  backBtn: { width: 44, height: 44, alignItems: "center", justifyContent: "center", marginBottom: spacing.sm },
-  backIcon: { fontSize: 22, color: colors.white },
-  heroBadge: {
-    alignSelf: "flex-start",
-    backgroundColor: "rgba(255,255,255,0.2)",
+  floatingBackBtn: {
+    position: "absolute",
+    top: 50,
+    left: spacing.base,
+    width: 44,
+    height: 44,
     borderRadius: radius.full,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 4,
+    backgroundColor: colors.surface,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 5,
   },
-  heroBadgeText: { fontSize: fontSize.xs, color: colors.white, fontWeight: fontWeight.semibold },
-  heroTitle: { fontSize: fontSize["2xl"], fontWeight: fontWeight.black, color: colors.white, lineHeight: 30 },
-  heroSub: { fontSize: fontSize.sm, color: colors.white, opacity: 0.85 },
-  body: { padding: spacing.base, gap: spacing.lg, paddingBottom: 100 },
+  content: { padding: spacing.base, gap: spacing.lg, paddingBottom: 100 },
+  header: {
+    flexDirection: "row",
+    gap: spacing.md,
+  },
+  title: {
+    fontSize: fontSize["2xl"],
+    fontWeight: fontWeight.black,
+    color: colors.text,
+    lineHeight: 30,
+  },
+  subtitle: {
+    fontSize: fontSize.sm,
+    color: colors.textMuted,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginTop: 2,
+  },
+  locationRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: spacing.xs,
+  },
+  location: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+  },
   statsRow: {
     flexDirection: "row",
     backgroundColor: colors.surface,

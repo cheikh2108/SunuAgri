@@ -10,8 +10,9 @@ import {
 } from "react-native";
 import { useAuth } from "../../../src/hooks/useAuth";
 import { apiFetch } from "../../../src/lib/api";
-import { Button } from "../../../src/components/Button";
+import { Button, Badge, SkeletonLoader, EmptyState } from "../../../src/components";
 import { colors, spacing, fontSize, fontWeight, radius } from "../../../src/lib/tokens";
+import { Ionicons } from "@expo/vector-icons";
 
 interface Profile {
   id: string;
@@ -75,7 +76,19 @@ export default function ProfileScreen() {
       </View>
 
       {loading ? (
-        <ActivityIndicator color={colors.primary} style={{ marginTop: 48 }} />
+        <View style={{ padding: spacing.base, gap: spacing.md }}>
+          <View style={styles.card}>
+            <SkeletonLoader width={56} height={56} borderRadius={radius.full} />
+            <SkeletonLoader width="60%" height={20} style={{ marginTop: spacing.md }} />
+            <SkeletonLoader width="40%" height={16} />
+          </View>
+        </View>
+      ) : !profile ? (
+        <EmptyState
+          icon="person-outline"
+          title="Aucun profil"
+          description="Impossible de charger votre profil"
+        />
       ) : (
         <>
           {profile && (
@@ -100,11 +113,12 @@ export default function ProfileScreen() {
                 {profile.verificationLevels.length > 0 && (
                   <View style={styles.badges}>
                     {profile.verificationLevels.map((v) => (
-                      <View key={v} style={styles.badge}>
-                        <Text style={styles.badgeText}>
-                          {VERIF_LABELS[v] ?? v}
-                        </Text>
-                      </View>
+                      <Badge
+                        key={v}
+                        label={VERIF_LABELS[v] ?? v}
+                        variant="success"
+                        size="md"
+                      />
                     ))}
                   </View>
                 )}
@@ -125,10 +139,29 @@ export default function ProfileScreen() {
             </>
           )}
 
+          {/* Menu options */}
+          <View style={styles.menu}>
+            <Pressable style={styles.menuItem}>
+              <Ionicons name="settings-outline" size={22} color={colors.text} />
+              <Text style={styles.menuText}>Paramètres</Text>
+              <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+            </Pressable>
+            <Pressable style={styles.menuItem}>
+              <Ionicons name="heart-outline" size={22} color={colors.text} />
+              <Text style={styles.menuText}>Mes favoris</Text>
+              <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+            </Pressable>
+            <Pressable style={styles.menuItem}>
+              <Ionicons name="help-circle-outline" size={22} color={colors.text} />
+              <Text style={styles.menuText}>Aide & support</Text>
+              <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+            </Pressable>
+          </View>
+
           <View style={styles.actions}>
             <Button
               label="Se déconnecter"
-              variant="outline"
+              variant="destructive"
               onPress={handleLogout}
             />
           </View>
@@ -200,16 +233,32 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: spacing.xs,
   },
-  badge: {
-    backgroundColor: colors.successLight,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    borderRadius: radius.full,
+  menu: {
+    backgroundColor: colors.surface,
+    marginHorizontal: spacing.base,
+    marginTop: spacing.lg,
+    borderRadius: radius.lg,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
   },
-  badgeText: {
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.semibold,
-    color: colors.primary,
+  menuItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.base,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  menuText: {
+    flex: 1,
+    fontSize: fontSize.base,
+    color: colors.text,
+    fontWeight: fontWeight.medium,
   },
   statsRow: {
     flexDirection: "row",

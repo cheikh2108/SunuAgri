@@ -47,7 +47,7 @@ export default function LoginScreen() {
         {/* Logo / marque */}
         <View style={styles.brand}>
           <View style={styles.logoBox}>
-            <Text style={styles.logoLetter}>S</Text>
+            <Text style={styles.logoIcon}>🌱</Text>
           </View>
           <Text style={styles.brandName}>SunuAgri</Text>
           <Text style={styles.brandSub}>Connecter la terre et le marché</Text>
@@ -144,10 +144,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: spacing.xs,
   },
-  logoLetter: {
-    fontSize: 30,
-    fontWeight: fontWeight.black,
-    color: colors.white,
+  logoIcon: {
+    fontSize: 36,
   },
   brandName: {
     fontSize: fontSize["2xl"],
