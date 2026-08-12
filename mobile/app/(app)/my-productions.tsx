@@ -14,13 +14,14 @@ import { Ionicons } from "@expo/vector-icons";
 import { apiFetch } from "../../src/lib/api";
 import { getActiveProfile, ActiveProfile } from "../../src/lib/active-profile";
 import {
-  ImageCard,
+  MyListingCard,
   EmptyState,
   SkeletonCard,
   Badge,
   Toast,
 } from "../../src/components";
-import { colors, spacing, fontSize, fontWeight, radius } from "../../src/lib/tokens";
+import { useTheme } from "../../src/contexts/ThemeContext";
+import { spacing, fontSize, fontWeight, radius } from "../../src/lib/tokens";
 
 interface Production {
   id: string;
@@ -36,12 +37,20 @@ interface Production {
   medias?: { url: string; mediaType: string }[];
 }
 
-const STATUS_LABELS: Record<string, { label: string; variant: "primary" | "secondary" | "success" | "warning" | "destructive" | "neutral" }> = {
-  DRAFT: { label: "Brouillon", variant: "neutral" },
-  PENDING_VALIDATION: { label: "En attente", variant: "warning" },
-  PUBLISHED: { label: "Publié", variant: "success" },
-  SUSPENDED: { label: "Suspendu", variant: "destructive" },
-  ARCHIVED: { label: "Archivé", variant: "neutral" },
+const STATUS_LABELS: Record<string, string> = {
+  DRAFT: "Brouillon",
+  PENDING_VALIDATION: "En attente",
+  PUBLISHED: "Publié",
+  SUSPENDED: "Suspendu",
+  ARCHIVED: "Archivé",
+};
+
+const STATUS_VARIANTS: Record<string, "success" | "warning" | "neutral" | "destructive"> = {
+  DRAFT: "neutral",
+  PENDING_VALIDATION: "warning",
+  PUBLISHED: "success",
+  SUSPENDED: "destructive",
+  ARCHIVED: "neutral",
 };
 
 const OFFER_LABELS: Record<string, string> = {
@@ -58,6 +67,8 @@ const OFFER_LABELS: Record<string, string> = {
 
 export default function MyProductionsScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   const [productions, setProductions] = useState<Production[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -273,51 +284,24 @@ export default function MyProductionsScreen() {
           }
         >
           {productions.map((p) => {
-            const statusInfo = STATUS_LABELS[p.status] || {
-              label: p.status,
-              variant: "neutral" as const,
-            };
             const imageUrl = p.medias?.find((m) => m.mediaType === "image")?.url;
+            const priceText = `${p.price.toLocaleString("fr-SN")} F / ${p.quantityUnit}`;
 
             return (
-              <View key={p.id} style={styles.productionCard}>
-                <ImageCard
-                  imageUrl={imageUrl}
-                  title={p.name}
-                  subtitle={p.category}
-                  badge={OFFER_LABELS[p.offerType] ?? p.offerType}
-                  badgeVariant="secondary"
-                  location={p.region}
-                  metadata={`${p.quantityAvailable} ${p.quantityUnit} restant${p.quantityAvailable > 1 ? "s" : ""}`}
-                  price={`${p.price.toLocaleString("fr-SN")} F / ${p.quantityUnit}`}
-                  onPress={() => router.push(`/production/${p.id}`)}
-                />
-
-                {/* Status and actions row */}
-                <View style={styles.actionsRow}>
-                  <Badge label={statusInfo.label} variant={statusInfo.variant} size="md" />
-
-                  <Pressable
-                    style={styles.menuButton}
-                    onPress={() => showActionsMenu(p)}
-                    hitSlop={12}
-                  >
-                    <Ionicons
-                      name="ellipsis-horizontal"
-                      size={20}
-                      color={colors.textSecondary}
-                    />
-                  </Pressable>
-                </View>
-
-                {/* Warning for exhausted */}
-                {p.quantityAvailable === 0 && (
-                  <View style={styles.warningBox}>
-                    <Ionicons name="warning-outline" size={16} color={colors.warning} />
-                    <Text style={styles.warningText}>Stock épuisé - Non visible publiquement</Text>
-                  </View>
-                )}
-              </View>
+              <MyListingCard
+                key={p.id}
+                imageUrl={imageUrl}
+                title={p.name}
+                status={p.status}
+                statusLabel={STATUS_LABELS[p.status] ?? p.status}
+                statusVariant={STATUS_VARIANTS[p.status] ?? "neutral"}
+                badge={`${p.category} - ${p.offerType}`}
+                location={p.region ?? "Localisation non précisée"}
+                metadata={`${p.quantityAvailable} ${p.quantityUnit}`}
+                price={priceText}
+                onPress={() => router.push(`/production/${p.id}`)}
+                onActionsPress={() => showActionsMenu(p)}
+              />
             );
           })}
         </ScrollView>
@@ -326,7 +310,7 @@ export default function MyProductionsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: colors.background,

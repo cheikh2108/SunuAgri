@@ -3,17 +3,20 @@ import {
   View,
   Text,
   ScrollView,
+  FlatList,
   StyleSheet,
   TouchableOpacity,
   Modal,
   Pressable,
   TextInput,
+  RefreshControl,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { apiFetch } from "../../../src/lib/api";
 import { ImageCard, SearchBar, SkeletonCard, EmptyState, Picker } from "../../../src/components";
 import { colors, spacing, fontSize, fontWeight, radius } from "../../../src/lib/tokens";
+import { useFavorites } from "../../../src/hooks/useFavorites";
 
 interface Field {
   id: string;
@@ -24,6 +27,7 @@ interface Field {
   areaSqm: number;
   price?: number;
   profile: { displayName: string };
+  medias?: { url: string; thumbnailUrl?: string }[];
 }
 
 const OP_LABELS: Record<string, string> = {
@@ -74,6 +78,7 @@ export default function FieldsScreen() {
   const [fields, setFields] = useState<Field[]>([]);
   const [filteredFields, setFilteredFields] = useState<Field[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [filterModalVisible, setFilterModalVisible] = useState(false);
@@ -86,16 +91,26 @@ export default function FieldsScreen() {
     maxArea: "",
   });
   const router = useRouter();
+  const { isFavorite, toggleFavorite } = useFavorites();
+
+  async function loadFields() {
+    const { data, error: err } = await apiFetch<{ data: Field[] }>("/api/fields");
+    if (err) setError(err);
+    else {
+      setFields(data?.data ?? []);
+      setFilteredFields(data?.data ?? []);
+    }
+    setLoading(false);
+    setRefreshing(false);
+  }
+
+  async function handleRefresh() {
+    setRefreshing(true);
+    await loadFields();
+  }
 
   useEffect(() => {
-    apiFetch<{ data: Field[] }>("/api/fields").then(({ data, error: err }) => {
-      if (err) setError(err);
-      else {
-        setFields(data?.data ?? []);
-        setFilteredFields(data?.data ?? []);
-      }
-      setLoading(false);
-    });
+    loadFields();
   }, []);
 
   useEffect(() => {
@@ -210,24 +225,41 @@ export default function FieldsScreen() {
           description={searchQuery ? "Essayez avec d'autres mots-clés" : "Revenez plus tard pour voir les nouvelles offres"}
         />
       ) : (
-        <ScrollView
+        <FlatList
+          data={filteredFields}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item: f }) => {
+            const imageUrl = f.medias?.[0]?.thumbnailUrl || f.medias?.[0]?.url;
+            return (
+              <ImageCard
+                imageUrl={imageUrl}
+                title={f.title}
+                badge={OP_LABELS[f.operationType] ?? f.operationType}
+                badgeVariant="primary"
+                location={`${f.region} · ${f.commune}`}
+                metadata={`${f.areaSqm} ha`}
+                price={f.price ? `${f.price.toLocaleString("fr-SN")} F` : undefined}
+                owner={f.profile.displayName}
+                onPress={() => router.push(`/(app)/field/${f.id}`)}
+                isFavorite={isFavorite("field", f.id)}
+                onFavoritePress={() => toggleFavorite("field", f.id)}
+              />
+            );
+          }}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
-        >
-          {filteredFields.map((f) => (
-            <ImageCard
-              key={f.id}
-              title={f.title}
-              badge={OP_LABELS[f.operationType] ?? f.operationType}
-              badgeVariant="primary"
-              location={`${f.region} · ${f.commune}`}
-              metadata={`${f.areaSqm} ha`}
-              price={f.price ? `${f.price.toLocaleString("fr-SN")} F` : undefined}
-              owner={f.profile.displayName}
-              onPress={() => router.push(`/(app)/field/${f.id}`)}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
             />
-          ))}
-        </ScrollView>
+          }
+          maxToRenderPerBatch={10}
+          windowSize={5}
+          removeClippedSubviews={true}
+        />
       )}
 
       <TouchableOpacity

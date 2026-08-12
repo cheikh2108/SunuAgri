@@ -17,34 +17,55 @@ export async function GET(req: NextRequest) {
   const page = Math.max(1, Number(searchParams.get("page") ?? 1));
   const limit = Math.min(50, Math.max(1, Number(searchParams.get("limit") ?? 20)));
 
-  const results: { fields?: unknown[]; productions?: unknown[] } = {};
+  const results: { fields?: unknown[]; productions?: unknown[]; meta?: any } = {};
+  let totalFields = 0;
+  let totalProductions = 0;
 
   if (type === "all" || type === "fields") {
-    results.fields = await prisma.field.findMany({
-      where: { status },
-      include: {
-        profile: { select: { id: true, displayName: true, verificationLevels: true } },
-        medias: { take: 1, orderBy: { orderIndex: "asc" } },
-        documents: true,
-      },
-      orderBy: { createdAt: "asc" },
-      skip: (page - 1) * limit,
-      take: limit,
-    });
+    const [items, count] = await Promise.all([
+      prisma.field.findMany({
+        where: { status },
+        include: {
+          profile: { select: { id: true, displayName: true, verificationLevels: true } },
+          medias: { take: 1, orderBy: { orderIndex: "asc" } },
+          documents: true,
+        },
+        orderBy: { createdAt: "asc" },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      prisma.field.count({ where: { status } }),
+    ]);
+    results.fields = items;
+    totalFields = count;
   }
 
   if (type === "all" || type === "productions") {
-    results.productions = await prisma.production.findMany({
-      where: { status },
-      include: {
-        profile: { select: { id: true, displayName: true, verificationLevels: true } },
-        medias: { take: 1, orderBy: { orderIndex: "asc" } },
-      },
-      orderBy: { createdAt: "asc" },
-      skip: (page - 1) * limit,
-      take: limit,
-    });
+    const [items, count] = await Promise.all([
+      prisma.production.findMany({
+        where: { status },
+        include: {
+          profile: { select: { id: true, displayName: true, verificationLevels: true } },
+          medias: { take: 1, orderBy: { orderIndex: "asc" } },
+        },
+        orderBy: { createdAt: "asc" },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      prisma.production.count({ where: { status } }),
+    ]);
+    results.productions = items;
+    totalProductions = count;
   }
+
+  results.meta = {
+    page,
+    limit,
+    totalFields,
+    totalProductions,
+    total: totalFields + totalProductions,
+    totalPages: Math.ceil(Math.max(totalFields, totalProductions) / limit),
+  };
 
   return NextResponse.json(results);
 }

@@ -15,12 +15,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const payload = await verifyToken(token);
   if (!payload) redirect("/login");
 
-  const profiles = await prisma.profile.findMany({
-    where: { userId: payload.userId, isActive: true },
-    select: { type: true },
+  const user = await prisma.user.findUnique({
+    where: { id: payload.userId },
+    select: { systemRole: true },
   });
 
-  const isAdmin = profiles.some((p) => ["ADMIN", "SUPER_ADMIN"].includes(p.type));
+  const isAdmin = user && ["ADMIN", "SUPER_ADMIN"].includes(user.systemRole);
   if (!isAdmin) redirect("/");
 
   return (

@@ -46,18 +46,23 @@ export default function ListingsPage() {
   const [acting, setActing] = useState<string | null>(null);
   const [rejectModal, setRejectModal] = useState<{ id: string; type: ListingType } | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+  const [page, setPage] = useState(1);
+  const [meta, setMeta] = useState<{ totalFields: number; totalProductions: number; totalPages: number; total: number } | null>(null);
 
   const fetchListings = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/listings?type=all&status=PENDING_VALIDATION");
+      const res = await fetch(`/api/admin/listings?type=all&status=PENDING_VALIDATION&page=${page}&limit=20`, {
+        credentials: "same-origin",
+      });
       const data = await res.json();
       setFields(data.fields ?? []);
       setProductions(data.productions ?? []);
+      setMeta(data.meta ?? null);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [page]);
 
   useEffect(() => { fetchListings(); }, [fetchListings]);
 
@@ -65,6 +70,7 @@ export default function ListingsPage() {
     setActing(listingId);
     await fetch("/api/admin/listings", {
       method: "PATCH",
+      credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ listingType: listingType === "fields" ? "field" : "production", listingId, action, reason }),
     });
@@ -75,7 +81,7 @@ export default function ListingsPage() {
   };
 
   const items = tab === "fields" ? fields : productions;
-  const pendingCount = fields.length + productions.length;
+  const pendingCount = meta?.total ?? (fields.length + productions.length);
 
   return (
     <div className="px-10 py-10 max-w-[1100px]">
@@ -100,7 +106,7 @@ export default function ListingsPage() {
         className="flex gap-1 p-1 rounded-lg mb-6 w-fit"
         style={{ background: "var(--muted)" }}>
         {(["fields", "productions"] as ListingType[]).map((t) => {
-          const count = t === "fields" ? fields.length : productions.length;
+          const count = t === "fields" ? (meta?.totalFields ?? fields.length) : (meta?.totalProductions ?? productions.length);
           const isActive = tab === t;
           return (
             <button key={t}
@@ -108,7 +114,7 @@ export default function ListingsPage() {
               aria-selected={isActive}
               aria-controls={`panel-${t}`}
               id={`tab-${t}`}
-              onClick={() => setTab(t)}
+              onClick={() => { setTab(t); setPage(1); }}
               className="flex items-center gap-2 px-4 py-2 rounded-md text-[13px] font-medium transition-all min-h-11"
               style={{
                 background: isActive ? "var(--card)" : "transparent",
@@ -143,22 +149,49 @@ export default function ListingsPage() {
           </p>
         </div>
       ) : (
-        <div
-          id={`panel-${tab}`}
-          role="tabpanel"
-          aria-labelledby={`tab-${tab}`}
-          className="space-y-3">
-          {items.map((item) => (
-            <ListingCard
-              key={item.id}
-              item={item}
-              type={tab}
-              acting={acting === item.id}
-              onApprove={() => act(tab, item.id, "approve")}
-              onReject={() => setRejectModal({ id: item.id, type: tab })}
-            />
-          ))}
-        </div>
+        <>
+          <div
+            id={`panel-${tab}`}
+            role="tabpanel"
+            aria-labelledby={`tab-${tab}`}
+            className="space-y-3">
+            {items.map((item) => (
+              <ListingCard
+                key={item.id}
+                item={item}
+                type={tab}
+                acting={acting === item.id}
+                onApprove={() => act(tab, item.id, "approve")}
+                onReject={() => setRejectModal({ id: item.id, type: tab })}
+              />
+            ))}
+          </div>
+
+          {/* Pagination */}
+          {meta && meta.totalPages > 1 && (
+            <div className="flex items-center justify-between mt-6 pt-6 border-t" style={{ borderColor: "var(--border)" }}>
+              <p className="text-[13px]" style={{ color: "var(--muted-foreground)" }}>
+                Page {page} sur {meta.totalPages} · {tab === "fields" ? meta.totalFields : meta.totalProductions} {tab === "fields" ? "champs" : "productions"} au total
+              </p>
+              <div className="flex gap-2">
+                <button
+                  disabled={page === 1}
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  className="px-4 py-2 rounded-lg text-[13px] font-medium disabled:opacity-40 disabled:cursor-not-allowed transition-opacity min-h-11"
+                  style={{ background: "var(--muted)", color: "var(--foreground)" }}>
+                  ← Précédent
+                </button>
+                <button
+                  disabled={page >= meta.totalPages}
+                  onClick={() => setPage(p => Math.min(meta.totalPages, p + 1))}
+                  className="px-4 py-2 rounded-lg text-[13px] font-medium disabled:opacity-40 disabled:cursor-not-allowed transition-opacity min-h-11"
+                  style={{ background: "var(--muted)", color: "var(--foreground)" }}>
+                  Suivant →
+                </button>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {/* Modal rejet */}

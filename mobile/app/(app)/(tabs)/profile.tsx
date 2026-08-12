@@ -180,29 +180,30 @@ export default function ProfileScreen() {
 
           {/* Menu options */}
           <View style={styles.menu}>
-            <Pressable style={styles.menuItem}>
+            <Pressable
+              style={styles.menuItem}
+              onPress={() => router.push("/(app)/settings")}
+            >
               <Ionicons name="settings-outline" size={22} color={colors.text} />
               <Text style={styles.menuText}>Paramètres</Text>
               <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
             </Pressable>
-            <Pressable style={styles.menuItem}>
+            <Pressable
+              style={styles.menuItem}
+              onPress={() => router.push("/(app)/favorites")}
+            >
               <Ionicons name="heart-outline" size={22} color={colors.text} />
               <Text style={styles.menuText}>Mes favoris</Text>
               <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
             </Pressable>
-            <Pressable style={styles.menuItem}>
+            <Pressable
+              style={styles.menuItem}
+              onPress={() => router.push("/(app)/help")}
+            >
               <Ionicons name="help-circle-outline" size={22} color={colors.text} />
               <Text style={styles.menuText}>Aide & support</Text>
               <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
             </Pressable>
-          </View>
-
-          <View style={styles.actions}>
-            <Button
-              label="Se déconnecter"
-              variant="destructive"
-              onPress={handleLogout}
-            />
           </View>
         </>
       )}

@@ -3,6 +3,10 @@ import { ListingStatus, ReportStatus } from "@/app/generated/prisma/client";
 import { FileCheck, Users, Flag, MapPin, ShoppingBasket, TrendingUp } from "lucide-react";
 import Link from "next/link";
 
+// Forcer le rafraîchissement des données à chaque visite
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 async function getStats() {
   const [
     totalUsers, suspendedUsers,

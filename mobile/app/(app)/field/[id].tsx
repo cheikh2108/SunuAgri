@@ -15,6 +15,7 @@ import { Button, ImageGallery, Badge, SkeletonLoader, TextInput, Toast } from ".
 import { colors, spacing, fontSize, fontWeight, radius } from "../../../src/lib/tokens";
 import { Ionicons } from "@expo/vector-icons";
 import { getActiveProfileId } from "../../../src/lib/active-profile";
+import { shareAnnonce } from "../../../src/lib/share";
 
 interface FieldDetail {
   id: string;
@@ -208,7 +209,7 @@ export default function FieldDetailScreen() {
         {/* Galerie d'images */}
         <ImageGallery images={imageUrls} placeholder="field" />
 
-        {/* Bouton retour flottant */}
+        {/* Boutons flottants */}
         <Pressable
           onPress={() => router.back()}
           style={styles.floatingBackBtn}
@@ -216,6 +217,24 @@ export default function FieldDetailScreen() {
           accessibilityLabel="Retour"
         >
           <Ionicons name="arrow-back" size={24} color={colors.text} />
+        </Pressable>
+
+        {/* Bouton partage flottant */}
+        <Pressable
+          onPress={() =>
+            shareAnnonce({
+              type: "field",
+              id: field.id,
+              title: field.title,
+              price: field.price,
+              location: `${field.region}, ${field.commune}`,
+            })
+          }
+          style={styles.floatingShareBtn}
+          hitSlop={12}
+          accessibilityLabel="Partager"
+        >
+          <Ionicons name="share-social-outline" size={22} color={colors.text} />
         </Pressable>
 
         <View style={styles.content}>
@@ -308,7 +327,12 @@ export default function FieldDetailScreen() {
           )}
 
           {/* Propriétaire */}
-          <View style={styles.ownerCard}>
+          <Pressable
+            style={styles.ownerCard}
+            onPress={() => router.push(`/(app)/profile/${field.profile.id}`)}
+            accessibilityRole="button"
+            accessibilityLabel={`Voir le profil de ${field.profile.displayName}`}
+          >
             <View style={styles.ownerAvatar}>
               <Text style={styles.ownerAvatarText}>
                 {field.profile.displayName[0]?.toUpperCase()}
@@ -321,31 +345,28 @@ export default function FieldDetailScreen() {
                 {isVerifiedOwner ? "  ✓ Identité vérifiée" : ""}
               </Text>
             </View>
-          </View>
+          </Pressable>
         </View>
       </ScrollView>
 
-      {/* CTA fixe en bas — thumb zone */}
+      {/* CTA fixe en bas */}
       {!isOwner && (
-        <View style={styles.cta}>
-          <Button
-            label="Demander une visite"
-            onPress={() => setVisitModalVisible(true)}
-            loading={requestingVisit}
-            style={{ flex: 1 }}
-          />
-          <Button
-            label="Faire une offre"
-            onPress={() => setOfferModalVisible(true)}
-            loading={makingOffer}
-            variant="secondary"
-            style={{ flex: 1 }}
-          />
-        </View>
-      )}
-
-      {!isOwner && (
-        <View style={styles.contactCta}>
+        <View style={styles.ctaContainer}>
+          <View style={styles.ctaRow}>
+            <Button
+              label="Demander une visite"
+              onPress={() => setVisitModalVisible(true)}
+              loading={requestingVisit}
+              style={{ flex: 1 }}
+            />
+            <Button
+              label="Faire une offre"
+              onPress={() => setOfferModalVisible(true)}
+              loading={makingOffer}
+              variant="secondary"
+              style={{ flex: 1 }}
+            />
+          </View>
           <Button
             label="Contacter le propriétaire"
             onPress={handleContact}
@@ -522,6 +543,24 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 8,
     elevation: 5,
+    zIndex: 10,
+  },
+  floatingShareBtn: {
+    position: "absolute",
+    top: 50,
+    right: spacing.base,
+    width: 44,
+    height: 44,
+    borderRadius: radius.full,
+    backgroundColor: colors.surface,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 5,
+    zIndex: 10,
   },
   content: {
     padding: spacing.base,
@@ -611,31 +650,22 @@ const styles = StyleSheet.create({
   ownerInfo: { flex: 1 },
   ownerName: { fontSize: fontSize.base, fontWeight: fontWeight.semibold, color: colors.text },
   ownerSub: { fontSize: fontSize.sm, color: colors.textSecondary, marginTop: 2 },
-  cta: {
-    position: "absolute",
-    bottom: 60,
-    left: 0,
-    right: 0,
-    backgroundColor: colors.surface,
-    paddingHorizontal: spacing.base,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    flexDirection: "row",
-    gap: spacing.md,
-  },
-  contactCta: {
+  ctaContainer: {
     position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
     backgroundColor: colors.surface,
     paddingHorizontal: spacing.base,
-    paddingTop: spacing.sm,
+    paddingTop: spacing.md,
     paddingBottom: 28,
     borderTopWidth: 1,
     borderTopColor: colors.border,
+    gap: spacing.sm,
+  },
+  ctaRow: {
+    flexDirection: "row",
+    gap: spacing.md,
   },
   modalOverlay: {
     flex: 1,

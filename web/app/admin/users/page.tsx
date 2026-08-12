@@ -36,7 +36,9 @@ export default function UsersPage() {
     if (search) params.set("search", search);
     if (filterSuspended === "suspended") params.set("suspended", "true");
     try {
-      const res = await fetch(`/api/admin/users?${params}`);
+      const res = await fetch(`/api/admin/users?${params}`, {
+        credentials: "same-origin",
+      });
       const data = await res.json();
       setUsers(data.data ?? []);
       setTotal(data.total ?? 0);
@@ -54,6 +56,7 @@ export default function UsersPage() {
     setActing(userId);
     await fetch("/api/admin/users", {
       method: "PATCH",
+      credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ userId, action, profileId }),
     });

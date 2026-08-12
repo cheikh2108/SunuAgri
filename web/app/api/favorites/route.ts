@@ -21,10 +21,33 @@ export async function GET(req: NextRequest) {
     where: { profileId: { in: profileIds } },
     include: {
       field: {
-        select: { id: true, title: true, status: true, region: true, commune: true, price: true, areaSqm: true },
+        select: {
+          id: true,
+          title: true,
+          status: true,
+          region: true,
+          commune: true,
+          price: true,
+          areaSqm: true,
+          operationType: true,
+          medias: { select: { url: true }, take: 1 },
+          profile: { select: { id: true, displayName: true, photoUrl: true } },
+        },
       },
       production: {
-        select: { id: true, name: true, status: true, category: true, price: true, quantityAvailable: true, quantityUnit: true },
+        select: {
+          id: true,
+          name: true,
+          status: true,
+          category: true,
+          offerType: true,
+          price: true,
+          quantityAvailable: true,
+          quantityUnit: true,
+          region: true,
+          medias: { select: { url: true }, take: 1 },
+          profile: { select: { id: true, displayName: true, photoUrl: true } },
+        },
       },
     },
     orderBy: { createdAt: "desc" },
@@ -39,6 +62,10 @@ export async function POST(req: NextRequest) {
   if (!ctx) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
 
   const profile = ctx.profiles[0];
+  if (!profile) {
+    return NextResponse.json({ error: "Aucun profil actif" }, { status: 400 });
+  }
+
   const body = await req.json().catch(() => null);
   const parsed = addSchema.safeParse(body);
   if (!parsed.success) {

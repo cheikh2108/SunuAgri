@@ -22,6 +22,8 @@ interface Props {
   owner?: string;
   onPress?: () => void;
   style?: ViewStyle;
+  isFavorite?: boolean;
+  onFavoritePress?: () => void;
 }
 
 export function ImageCard({
@@ -36,6 +38,8 @@ export function ImageCard({
   owner,
   onPress,
   style,
+  isFavorite = false,
+  onFavoritePress,
 }: Props) {
   const placeholderColor = badgeVariant === "primary" ? colors.primary : colors.secondary;
 
@@ -57,6 +61,20 @@ export function ImageCard({
               style={{ opacity: 0.5 }}
             />
           </View>
+        )}
+        {onFavoritePress && (
+          <Pressable
+            onPress={onFavoritePress}
+            style={styles.favoriteButton}
+            hitSlop={12}
+            accessibilityLabel={isFavorite ? "Retirer des favoris" : "Ajouter aux favoris"}
+          >
+            <Ionicons
+              name={isFavorite ? "heart" : "heart-outline"}
+              size={24}
+              color={isFavorite ? colors.destructive : colors.white}
+            />
+          </Pressable>
         )}
         {badge && (
           <View
@@ -131,6 +149,17 @@ const styles = StyleSheet.create({
   placeholder: {
     width: "100%",
     height: "100%",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  favoriteButton: {
+    position: "absolute",
+    top: spacing.sm,
+    left: spacing.sm,
+    width: 40,
+    height: 40,
+    borderRadius: radius.full,
+    backgroundColor: "rgba(0,0,0,0.4)",
     alignItems: "center",
     justifyContent: "center",
   },

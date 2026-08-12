@@ -11,8 +11,9 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { apiFetch } from "../../src/lib/api";
-import { ImageCard, EmptyState, Badge, Toast } from "../../src/components";
-import { colors, spacing, fontSize, fontWeight, radius } from "../../src/lib/tokens";
+import { MyListingCard, EmptyState, Badge, Toast } from "../../src/components";
+import { useTheme } from "../../src/contexts/ThemeContext";
+import { spacing, fontSize, fontWeight, radius } from "../../src/lib/tokens";
 import { Ionicons } from "@expo/vector-icons";
 
 interface Field {
@@ -64,6 +65,8 @@ const OP_LABELS: Record<string, string> = {
 
 export default function MyFieldsScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   const [fields, setFields] = useState<Field[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -158,35 +161,23 @@ export default function MyFieldsScreen() {
   function renderField({ item }: { item: Field }) {
     const imageUrl = item.medias?.[0]?.url;
     const priceText = item.price
-      ? `${item.price.toLocaleString("fr-SN")} FCFA`
+      ? `${item.price.toLocaleString("fr-SN")} F`
       : undefined;
 
     return (
-      <View style={styles.fieldItem}>
-        <ImageCard
-          imageUrl={imageUrl}
-          title={item.title}
-          subtitle={OP_LABELS[item.operationType] ?? item.operationType}
-          location={`${item.commune}, ${item.region}`}
-          metadata={`${item.areaSqm} ${item.areaUnit}`}
-          price={priceText}
-          onPress={() => handleFieldPress(item)}
-        />
-        <View style={styles.fieldFooter}>
-          <Badge
-            label={STATUS_LABELS[item.status] ?? item.status}
-            variant={STATUS_VARIANTS[item.status] ?? "neutral"}
-            size="md"
-          />
-          <Pressable
-            onPress={() => handleActionsPress(item)}
-            hitSlop={12}
-            style={styles.actionsBtn}
-          >
-            <Ionicons name="ellipsis-horizontal" size={20} color={colors.text} />
-          </Pressable>
-        </View>
-      </View>
+      <MyListingCard
+        imageUrl={imageUrl}
+        title={item.title}
+        status={item.status}
+        statusLabel={STATUS_LABELS[item.status] ?? item.status}
+        statusVariant={STATUS_VARIANTS[item.status] ?? "neutral"}
+        badge={OP_LABELS[item.operationType] ?? item.operationType}
+        location={`${item.commune}, ${item.region}`}
+        metadata={`${item.areaSqm} ${item.areaUnit}`}
+        price={priceText}
+        onPress={() => handleFieldPress(item)}
+        onActionsPress={() => handleActionsPress(item)}
+      />
     );
   }
 
@@ -352,7 +343,7 @@ function FilterTab({
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: colors.background,

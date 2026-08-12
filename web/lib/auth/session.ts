@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 export interface AuthContext {
   userId: string;
   sessionId: string;
+  systemRole: string;
   profiles: { id: string; type: string }[];
 }
 
@@ -26,13 +27,13 @@ export async function getAuthContext(req: NextRequest): Promise<AuthContext | nu
 
   // Si pas de session, en créer une
   if (!session) {
-    // Vérifier que l'utilisateur existe avant de créer la session
-    const userExists = await prisma.user.findUnique({
+    // Vérifier que l'utilisateur existe et récupérer son rôle
+    const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true },
+      select: { id: true, systemRole: true },
     });
 
-    if (!userExists) {
+    if (!user) {
       // L'utilisateur n'existe plus (probablement supprimé de la BDD)
       return null;
     }
@@ -49,12 +50,26 @@ export async function getAuthContext(req: NextRequest): Promise<AuthContext | nu
     });
   }
 
-  const profiles = await prisma.profile.findMany({
-    where: { userId, isActive: true },
-    select: { id: true, type: true },
+  // Récupérer le systemRole de l'utilisateur ET ses profils en une seule requête
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      systemRole: true,
+      profiles: {
+        where: { isActive: true },
+        select: { id: true, type: true },
+      },
+    },
   });
 
-  return { userId, sessionId: session.id, profiles };
+  if (!user) return null;
+
+  return {
+    userId,
+    sessionId: session.id,
+    systemRole: user.systemRole,
+    profiles: user.profiles,
+  };
 }
 
 // Retourne le premier profil du type demandé, ou null
@@ -63,5 +78,5 @@ export function getProfile(ctx: AuthContext, type: string) {
 }
 
 export function isAdmin(ctx: AuthContext) {
-  return ctx.profiles.some((p) => p.type === "ADMIN" || p.type === "SUPER_ADMIN");
+  return ctx.systemRole === "ADMIN" || ctx.systemRole === "SUPER_ADMIN";
 }

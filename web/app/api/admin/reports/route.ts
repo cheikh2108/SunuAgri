@@ -14,18 +14,21 @@ export async function GET(req: NextRequest) {
   const page = Math.max(1, Number(searchParams.get("page") ?? 1));
   const limit = Math.min(50, Math.max(1, Number(searchParams.get("limit") ?? 20)));
 
-  const reports = await prisma.report.findMany({
-    where: { status },
-    include: {
-      authorProfile: { select: { id: true, displayName: true } },
-      reportedProfile: { select: { id: true, displayName: true } },
-      reportedField: { select: { id: true, title: true } },
-      reportedProduction: { select: { id: true, name: true } },
-    },
-    orderBy: { createdAt: "asc" },
-    skip: (page - 1) * limit,
-    take: limit,
-  });
+  const [reports, total] = await Promise.all([
+    prisma.report.findMany({
+      where: { status },
+      include: {
+        authorProfile: { select: { id: true, displayName: true } },
+        reportedProfile: { select: { id: true, displayName: true } },
+        reportedField: { select: { id: true, title: true } },
+        reportedProduction: { select: { id: true, name: true } },
+      },
+      orderBy: { createdAt: "asc" },
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+    prisma.report.count({ where: { status } }),
+  ]);
 
-  return NextResponse.json({ data: reports, page, limit });
+  return NextResponse.json({ data: reports, total, page, limit });
 }

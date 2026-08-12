@@ -9,6 +9,8 @@ import {
   Platform,
   ActivityIndicator,
   Pressable,
+  AppState,
+  AppStateStatus,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { apiFetch } from "../../../src/lib/api";
@@ -85,16 +87,44 @@ export default function ConversationScreen() {
   useEffect(() => {
     fetchConversation();
 
-    // Rafraîchir les messages toutes les 5 secondes pour mettre à jour les statuts de lecture
-    const interval = setInterval(() => {
-      if (!sending) {
-        apiFetch<Message[]>(`/api/conversations/${id}/messages`).then(({ data }) => {
-          if (data) setMessages(data);
-        });
-      }
-    }, 5000);
+    let interval: NodeJS.Timeout | null = null;
+    let appStateListener: any = null;
 
-    return () => clearInterval(interval);
+    const startPolling = () => {
+      if (interval) return; // Éviter les doublons
+      // Polling toutes les 15s (au lieu de 5s) pour économiser batterie/data
+      interval = setInterval(() => {
+        if (!sending && AppState.currentState === 'active') {
+          apiFetch<Message[]>(`/api/conversations/${id}/messages`).then(({ data }) => {
+            if (data) setMessages(data);
+          });
+        }
+      }, 15000);
+    };
+
+    const stopPolling = () => {
+      if (interval) {
+        clearInterval(interval);
+        interval = null;
+      }
+    };
+
+    // Gérer le changement d'état de l'app
+    const handleAppStateChange = (nextAppState: AppStateStatus) => {
+      if (nextAppState === 'active') {
+        startPolling();
+      } else {
+        stopPolling(); // Arrêter le polling en background
+      }
+    };
+
+    appStateListener = AppState.addEventListener('change', handleAppStateChange);
+    startPolling();
+
+    return () => {
+      stopPolling();
+      appStateListener?.remove();
+    };
   }, [id, sending]);
 
   async function handleSend() {

@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Modal, Pressable } from "react-native";
+import { View, Text, ScrollView, FlatList, StyleSheet, TouchableOpacity, Modal, Pressable, RefreshControl } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { apiFetch } from "../../../src/lib/api";
 import { ImageCard, SearchBar, SkeletonCard, EmptyState, Picker, MultiSelect, Button, TextInput } from "../../../src/components";
 import { colors, spacing, fontSize, fontWeight, radius } from "../../../src/lib/tokens";
+import { useFavorites } from "../../../src/hooks/useFavorites";
 
 interface Production {
   id: string;
@@ -16,6 +17,7 @@ interface Production {
   quantityUnit: string;
   price: number;
   profile: { displayName: string };
+  medias?: { url: string; thumbnailUrl?: string }[];
 }
 
 interface Filters {
@@ -81,6 +83,7 @@ export default function MarketScreen() {
   const [productions, setProductions] = useState<Production[]>([]);
   const [filteredProductions, setFilteredProductions] = useState<Production[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [filterModalVisible, setFilterModalVisible] = useState(false);
@@ -92,16 +95,26 @@ export default function MarketScreen() {
     maxPrice: "",
   });
   const router = useRouter();
+  const { isFavorite, toggleFavorite } = useFavorites();
+
+  async function loadProductions() {
+    const { data, error: err } = await apiFetch<{ data: Production[] }>("/api/productions");
+    if (err) setError(err);
+    else {
+      setProductions(data?.data ?? []);
+      setFilteredProductions(data?.data ?? []);
+    }
+    setLoading(false);
+    setRefreshing(false);
+  }
+
+  async function handleRefresh() {
+    setRefreshing(true);
+    await loadProductions();
+  }
 
   useEffect(() => {
-    apiFetch<{ data: Production[] }>("/api/productions").then(({ data, error: err }) => {
-      if (err) setError(err);
-      else {
-        setProductions(data?.data ?? []);
-        setFilteredProductions(data?.data ?? []);
-      }
-      setLoading(false);
-    });
+    loadProductions();
   }, []);
 
   useEffect(() => {
@@ -203,25 +216,42 @@ export default function MarketScreen() {
           description={searchQuery || activeFilterCount() > 0 ? "Essayez avec d'autres critères" : "Revenez plus tard pour voir les nouvelles offres"}
         />
       ) : (
-        <ScrollView
+        <FlatList
+          data={filteredProductions}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item: p }) => {
+            const imageUrl = p.medias?.[0]?.thumbnailUrl || p.medias?.[0]?.url;
+            return (
+              <ImageCard
+                imageUrl={imageUrl}
+                title={p.name}
+                subtitle={p.category}
+                badge={OFFER_LABELS[p.offerType] ?? p.offerType}
+                badgeVariant="secondary"
+                location={p.region}
+                metadata={`${p.quantityAvailable} ${p.quantityUnit}`}
+                price={`${p.price.toLocaleString("fr-SN")} F / ${p.quantityUnit}`}
+                owner={p.profile.displayName}
+                onPress={() => router.push(`/(app)/production/${p.id}`)}
+                isFavorite={isFavorite("production", p.id)}
+                onFavoritePress={() => toggleFavorite("production", p.id)}
+              />
+            );
+          }}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
-        >
-          {filteredProductions.map((p) => (
-            <ImageCard
-              key={p.id}
-              title={p.name}
-              subtitle={p.category}
-              badge={OFFER_LABELS[p.offerType] ?? p.offerType}
-              badgeVariant="secondary"
-              location={p.region}
-              metadata={`${p.quantityAvailable} ${p.quantityUnit}`}
-              price={`${p.price.toLocaleString("fr-SN")} F / ${p.quantityUnit}`}
-              owner={p.profile.displayName}
-              onPress={() => router.push(`/(app)/production/${p.id}`)}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={colors.secondary}
+              colors={[colors.secondary]}
             />
-          ))}
-        </ScrollView>
+          }
+          maxToRenderPerBatch={10}
+          windowSize={5}
+          removeClippedSubviews={true}
+        />
       )}
 
       <TouchableOpacity

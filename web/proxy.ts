@@ -12,7 +12,6 @@ const PROTECTED_PREFIXES = [
   "/api/reports",
   "/api/dashboard",
   "/api/profile",
-  "/api/profiles",
   "/api/supply-needs",
 ];
 const ADMIN_PREFIXES = ["/admin", "/api/admin"];
@@ -26,6 +25,8 @@ const PUBLIC_ROUTES = [
   "/api/auth/register",
   "/api/auth/otp",
   "/api/health",
+  "/api/profiles", // Profils publics
+  "/api/reviews", // Avis publics
 ];
 
 function isPublicRoute(pathname: string): boolean {
@@ -91,7 +92,6 @@ export const config = {
     "/api/reports/:path*",
     "/api/dashboard/:path*",
     "/api/profile/:path*",
-    "/api/profiles/:path*",
     "/api/supply-needs/:path*",
     "/api/admin/:path*",
   ],

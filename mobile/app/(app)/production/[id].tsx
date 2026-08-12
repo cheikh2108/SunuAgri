@@ -14,6 +14,7 @@ import { Button, ImageGallery, Badge, SkeletonLoader, Toast, TextInput } from ".
 import { colors, spacing, fontSize, fontWeight, radius } from "../../../src/lib/tokens";
 import { Ionicons } from "@expo/vector-icons";
 import { getActiveProfile, ActiveProfile } from "../../../src/lib/active-profile";
+import { shareAnnonce } from "../../../src/lib/share";
 
 interface ProductionDetail {
   id: string;
@@ -183,7 +184,7 @@ export default function ProductionDetailScreen() {
         {/* Galerie d'images */}
         <ImageGallery images={imageUrls} placeholder="production" />
 
-        {/* Bouton retour flottant */}
+        {/* Boutons flottants */}
         <Pressable
           onPress={() => router.back()}
           style={styles.floatingBackBtn}
@@ -191,6 +192,23 @@ export default function ProductionDetailScreen() {
           accessibilityLabel="Retour"
         >
           <Ionicons name="arrow-back" size={24} color={colors.text} />
+        </Pressable>
+
+        <Pressable
+          onPress={() =>
+            shareAnnonce({
+              type: "production",
+              id: production.id,
+              title: production.name,
+              price: production.price,
+              location: production.region,
+            })
+          }
+          style={styles.floatingShareBtn}
+          hitSlop={12}
+          accessibilityLabel="Partager"
+        >
+          <Ionicons name="share-social-outline" size={22} color={colors.text} />
         </Pressable>
 
         <View style={styles.content}>
@@ -264,7 +282,12 @@ export default function ProductionDetailScreen() {
           )}
 
           {/* Producteur */}
-          <View style={styles.ownerCard}>
+          <Pressable
+            style={styles.ownerCard}
+            onPress={() => router.push(`/(app)/profile/${prod.profile.id}`)}
+            accessibilityRole="button"
+            accessibilityLabel={`Voir le profil de ${prod.profile.displayName}`}
+          >
             <View style={styles.ownerAvatar}>
               <Text style={styles.ownerAvatarText}>
                 {prod.profile.displayName[0]?.toUpperCase()}
@@ -276,7 +299,7 @@ export default function ProductionDetailScreen() {
                 {isVerified ? "✓ Identité vérifiée" : "Producteur"}
               </Text>
             </View>
-          </View>
+          </Pressable>
         </View>
       </ScrollView>
 
@@ -411,6 +434,24 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 8,
     elevation: 5,
+    zIndex: 10,
+  },
+  floatingShareBtn: {
+    position: "absolute",
+    top: 50,
+    right: spacing.base,
+    width: 44,
+    height: 44,
+    borderRadius: radius.full,
+    backgroundColor: colors.surface,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 5,
+    zIndex: 10,
   },
   content: { padding: spacing.base, gap: spacing.lg, paddingBottom: 100 },
   header: {

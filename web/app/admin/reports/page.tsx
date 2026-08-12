@@ -43,25 +43,31 @@ export default function ReportsPage() {
   const [reports, setReports] = useState<ReportItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
 
   const fetchReports = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/reports?status=PENDING");
+      const res = await fetch(`/api/admin/reports?status=PENDING&page=${page}&limit=20`, {
+        credentials: "same-origin",
+      });
       if (res.ok) {
         const data = await res.json();
         setReports(Array.isArray(data) ? data : data.data ?? []);
+        setTotal(data.total ?? (Array.isArray(data) ? data.length : 0));
       }
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [page]);
 
   useEffect(() => { fetchReports(); }, [fetchReports]);
 
   const resolve = async (id: string, status: "RESOLVED" | "DISMISSED") => {
     await fetch(`/api/admin/reports/${id}`, {
       method: "PATCH",
+      credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
     });
@@ -75,10 +81,10 @@ export default function ReportsPage() {
           style={{ color: "var(--primary)", opacity: 0.7 }}>Modération</p>
         <div className="flex items-end justify-between">
           <h1 className="text-[2.4rem] font-black leading-none tracking-tight">Signalements</h1>
-          {reports.length > 0 && (
+          {total > 0 && (
             <span className="mb-1 px-2.5 py-1 rounded-full text-xs font-bold"
               style={{ background: "var(--destructive)", color: "white" }}>
-              {reports.length} en attente
+              {total} en attente
             </span>
           )}
         </div>
@@ -157,6 +163,31 @@ export default function ReportsPage() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {total > 20 && (
+        <div className="flex items-center justify-between mt-6 pt-6 border-t" style={{ borderColor: "var(--border)" }}>
+          <p className="text-[13px]" style={{ color: "var(--muted-foreground)" }}>
+            Page {page} sur {Math.ceil(total / 20)} · {total} signalements au total
+          </p>
+          <div className="flex gap-2">
+            <button
+              disabled={page === 1}
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              className="px-4 py-2 rounded-lg text-[13px] font-medium disabled:opacity-40 disabled:cursor-not-allowed transition-opacity min-h-11"
+              style={{ background: "var(--muted)", color: "var(--foreground)" }}>
+              ← Précédent
+            </button>
+            <button
+              disabled={page >= Math.ceil(total / 20)}
+              onClick={() => setPage(p => Math.min(Math.ceil(total / 20), p + 1))}
+              className="px-4 py-2 rounded-lg text-[13px] font-medium disabled:opacity-40 disabled:cursor-not-allowed transition-opacity min-h-11"
+              style={{ background: "var(--muted)", color: "var(--foreground)" }}>
+              Suivant →
+            </button>
+          </div>
         </div>
       )}
     </div>
