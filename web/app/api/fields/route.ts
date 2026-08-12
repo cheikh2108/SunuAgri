@@ -31,6 +31,10 @@ const createSchema = z.object({
   hasBuildings: z.boolean().default(false),
   specialConditions: z.string().optional(),
   expiresAt: z.string().datetime().optional(),
+  mediaUrls: z.array(z.object({
+    url: z.string(),
+    mediaId: z.string(),
+  })).optional(),
 });
 
 // POST /api/fields — créer une annonce (brouillon)
@@ -83,6 +87,15 @@ export async function POST(req: NextRequest) {
       hasBuildings: data.hasBuildings,
       specialConditions: data.specialConditions,
       expiresAt: data.expiresAt ? new Date(data.expiresAt) : undefined,
+      medias: data.mediaUrls
+        ? {
+            create: data.mediaUrls.map((media, index) => ({
+              url: media.url,
+              mediaType: "image",
+              orderIndex: index,
+            })),
+          }
+        : undefined,
     },
     select: { id: true, title: true, status: true, createdAt: true },
   });
@@ -90,10 +103,12 @@ export async function POST(req: NextRequest) {
   return NextResponse.json(field, { status: 201 });
 }
 
-// GET /api/fields — recherche publique (pas de GPS exact)
+// GET /api/fields — recherche publique (pas de GPS exact) ou mes annonces (mine=true)
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
 
+  const mine = searchParams.get("mine") === "true";
+  const status = searchParams.get("status") as ListingStatus | null;
   const region = searchParams.get("region") ?? undefined;
   const commune = searchParams.get("commune") ?? undefined;
   const operationType = searchParams.get("operationType") as FieldOperationType | null;
@@ -104,6 +119,61 @@ export async function GET(req: NextRequest) {
   const page = Math.max(1, Number(searchParams.get("page") ?? 1));
   const limit = Math.min(50, Math.max(1, Number(searchParams.get("limit") ?? 20)));
 
+  // Si mine=true, nécessite une authentification et retourne les annonces du profil actif
+  if (mine) {
+    const ctx = await getAuthContext(req);
+    if (!ctx) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+
+    const ownerProfile = ctx.profiles.find((p) =>
+      ["OWNER", "PRODUCER"].includes(p.type)
+    );
+    if (!ownerProfile) {
+      return NextResponse.json({ error: "Profil propriétaire requis" }, { status: 403 });
+    }
+
+    const fields = await prisma.field.findMany({
+      where: {
+        profileId: ownerProfile.id,
+        ...(status && { status }),
+      },
+      select: {
+        id: true,
+        title: true,
+        operationType: true,
+        status: true,
+        verificationLevel: true,
+        region: true,
+        department: true,
+        commune: true,
+        locality: true,
+        areaSqm: true,
+        areaUnit: true,
+        price: true,
+        isPriceNegotiable: true,
+        soilType: true,
+        suitableCrops: true,
+        waterAvailability: true,
+        availableFrom: true,
+        publishedAt: true,
+        createdAt: true,
+        medias: { select: { url: true, mediaType: true }, take: 1, orderBy: { orderIndex: "asc" } },
+      },
+      skip: (page - 1) * limit,
+      take: limit,
+      orderBy: { createdAt: "desc" },
+    });
+
+    const total = await prisma.field.count({
+      where: {
+        profileId: ownerProfile.id,
+        ...(status && { status }),
+      },
+    });
+
+    return NextResponse.json({ data: fields, total, page, limit });
+  }
+
+  // Recherche publique
   const fields = await prisma.field.findMany({
     where: {
       status: ListingStatus.PUBLISHED,

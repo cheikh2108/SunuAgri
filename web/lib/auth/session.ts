@@ -7,25 +7,54 @@ export interface AuthContext {
   profiles: { id: string; type: string }[];
 }
 
-// Extrait userId/sessionId injectés par le middleware, vérifie la session en base
+// Extrait userId/token injectés par le middleware, crée/récupère la session en base
 export async function getAuthContext(req: NextRequest): Promise<AuthContext | null> {
   const userId = req.headers.get("x-user-id");
-  const sessionId = req.headers.get("x-session-id");
+  const token = req.headers.get("x-token");
 
-  if (!userId || !sessionId) return null;
+  if (!userId || !token) return null;
 
-  const session = await prisma.session.findFirst({
-    where: { id: sessionId, userId, revokedAt: null, expiresAt: { gt: new Date() } },
+  // Trouver ou créer une session pour ce token
+  let session = await prisma.session.findFirst({
+    where: {
+      userId,
+      token,
+      revokedAt: null,
+      expiresAt: { gt: new Date() }
+    },
   });
 
-  if (!session) return null;
+  // Si pas de session, en créer une
+  if (!session) {
+    // Vérifier que l'utilisateur existe avant de créer la session
+    const userExists = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true },
+    });
+
+    if (!userExists) {
+      // L'utilisateur n'existe plus (probablement supprimé de la BDD)
+      return null;
+    }
+
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 30); // 30 jours
+
+    session = await prisma.session.create({
+      data: {
+        userId,
+        token,
+        expiresAt,
+      },
+    });
+  }
 
   const profiles = await prisma.profile.findMany({
     where: { userId, isActive: true },
     select: { id: true, type: true },
   });
 
-  return { userId, sessionId, profiles };
+  return { userId, sessionId: session.id, profiles };
 }
 
 // Retourne le premier profil du type demandé, ou null

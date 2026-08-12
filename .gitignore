@@ -55,3 +55,12 @@ SPEC.md
 .agents/
 .windsurf/
 skills-lock.json
+
+# Logs
+*.log
+
+# Scripts de test temporaires
+web/add-*.ts
+web/check-*.ts
+web/get-*.ts
+web/verify-*.ts

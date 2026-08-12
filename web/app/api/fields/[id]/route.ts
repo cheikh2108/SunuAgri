@@ -31,6 +31,11 @@ export async function GET(
           region: true,
           commune: true,
           avgResponseHours: true,
+          _count: {
+            select: {
+              fields: true,
+            },
+          },
         },
       },
     },
@@ -163,4 +168,30 @@ export async function PATCH(
   });
 
   return NextResponse.json(updated);
+}
+
+// DELETE /api/fields/[id] — supprimer une annonce (soft delete via statut ARCHIVED)
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  const ctx = await getAuthContext(req);
+  if (!ctx) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+
+  const field = await prisma.field.findUnique({ where: { id } });
+  if (!field) return NextResponse.json({ error: "Annonce introuvable" }, { status: 404 });
+
+  const isOwner = ctx.profiles.some((p) => p.id === field.profileId);
+  if (!isOwner && !isAdmin(ctx)) {
+    return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+  }
+
+  // Soft delete via statut ARCHIVED
+  await prisma.field.update({
+    where: { id },
+    data: { status: ListingStatus.ARCHIVED },
+  });
+
+  return NextResponse.json({ success: true }, { status: 200 });
 }

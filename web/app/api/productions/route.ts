@@ -26,6 +26,10 @@ const createSchema = z.object({
   storageConditions: z.string().optional(),
   deliveryModes: z.array(z.string()).default([]),
   expiresAt: z.string().datetime().optional(),
+  mediaUrls: z.array(z.object({
+    url: z.string(),
+    mediaId: z.string(),
+  })).optional(),
 });
 
 // POST /api/productions — créer une production (brouillon)
@@ -73,6 +77,15 @@ export async function POST(req: NextRequest) {
       storageConditions: data.storageConditions,
       deliveryModes: data.deliveryModes,
       expiresAt: data.expiresAt ? new Date(data.expiresAt) : undefined,
+      medias: data.mediaUrls
+        ? {
+            create: data.mediaUrls.map((media, index) => ({
+              url: media.url,
+              mediaType: "image",
+              orderIndex: index,
+            })),
+          }
+        : undefined,
     },
     select: { id: true, name: true, status: true, createdAt: true },
   });
@@ -80,10 +93,11 @@ export async function POST(req: NextRequest) {
   return NextResponse.json(production, { status: 201 });
 }
 
-// GET /api/productions — recherche publique
+// GET /api/productions — recherche publique ou mes productions
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
 
+  const mine = searchParams.get("mine") === "true";
   const category = searchParams.get("category") ?? undefined;
   const region = searchParams.get("region") ?? undefined;
   const offerType = searchParams.get("offerType") as ProductionOfferType | null;
@@ -92,12 +106,33 @@ export async function GET(req: NextRequest) {
   const page = Math.max(1, Number(searchParams.get("page") ?? 1));
   const limit = Math.min(50, Math.max(1, Number(searchParams.get("limit") ?? 20)));
 
+  // Si mine=true, l'utilisateur doit être authentifié
+  let profileId: string | undefined;
+  if (mine) {
+    const ctx = await getAuthContext(req);
+    if (!ctx) {
+      return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+    }
+    const producerProfile = ctx.profiles.find((p) =>
+      ["PRODUCER", "OWNER"].includes(p.type)
+    );
+    if (!producerProfile) {
+      return NextResponse.json({ error: "Profil producteur requis" }, { status: 403 });
+    }
+    profileId = producerProfile.id;
+  }
+
   const productions = await prisma.production.findMany({
     where: {
-      status: ListingStatus.PUBLISHED,
-      expiresAt: { gt: new Date() },
-      // Règle §9.7 : productions épuisées exclues
-      quantityAvailable: { gt: 0 },
+      ...(mine
+        ? { profileId } // Si mine=true, filtrer par profileId (tous statuts)
+        : {
+            // Sinon, recherche publique uniquement des annonces publiées
+            status: ListingStatus.PUBLISHED,
+            expiresAt: { gt: new Date() },
+            // Règle §9.7 : productions épuisées exclues
+            quantityAvailable: { gt: 0 },
+          }),
       ...(category && { category }),
       ...(region && { region }),
       ...(offerType && { offerType }),
@@ -145,9 +180,13 @@ export async function GET(req: NextRequest) {
 
   const total = await prisma.production.count({
     where: {
-      status: ListingStatus.PUBLISHED,
-      expiresAt: { gt: new Date() },
-      quantityAvailable: { gt: 0 },
+      ...(mine
+        ? { profileId }
+        : {
+            status: ListingStatus.PUBLISHED,
+            expiresAt: { gt: new Date() },
+            quantityAvailable: { gt: 0 },
+          }),
       ...(category && { category }),
       ...(region && { region }),
       ...(offerType && { offerType }),

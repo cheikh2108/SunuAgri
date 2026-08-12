@@ -1,20 +1,22 @@
 import React from "react";
 import {
   View,
+  Text,
   TextInput,
   Pressable,
   StyleSheet,
   type TextInputProps,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { colors, spacing, radius, fontSize } from "../lib/tokens";
+import { colors, spacing, radius, fontSize, fontWeight } from "../lib/tokens";
 
 interface Props extends TextInputProps {
   onFilterPress?: () => void;
   showFilter?: boolean;
+  filterCount?: number;
 }
 
-export function SearchBar({ onFilterPress, showFilter = false, ...rest }: Props) {
+export function SearchBar({ onFilterPress, showFilter = false, filterCount = 0, ...rest }: Props) {
   return (
     <View style={styles.container}>
       <View style={styles.searchBox}>
@@ -27,14 +29,21 @@ export function SearchBar({ onFilterPress, showFilter = false, ...rest }: Props)
         />
       </View>
       {showFilter && (
-        <Pressable
-          onPress={onFilterPress}
-          style={({ pressed }) => [styles.filterBtn, pressed && { opacity: 0.6 }]}
-          accessibilityRole="button"
-          accessibilityLabel="Filtres"
-        >
-          <Ionicons name="options-outline" size={22} color={colors.text} />
-        </Pressable>
+        <View>
+          <Pressable
+            onPress={onFilterPress}
+            style={({ pressed }) => [styles.filterBtn, pressed && { opacity: 0.6 }]}
+            accessibilityRole="button"
+            accessibilityLabel="Filtres"
+          >
+            <Ionicons name="options-outline" size={22} color={colors.text} />
+          </Pressable>
+          {filterCount > 0 && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{filterCount}</Text>
+            </View>
+          )}
+        </View>
       )}
     </View>
   );
@@ -74,5 +83,22 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 1,
     borderColor: colors.border,
+  },
+  badge: {
+    position: "absolute",
+    top: -4,
+    right: -4,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: colors.destructive,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 4,
+  },
+  badgeText: {
+    fontSize: 10,
+    fontWeight: fontWeight.bold,
+    color: colors.white,
   },
 });

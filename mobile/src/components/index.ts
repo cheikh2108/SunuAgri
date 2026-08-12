@@ -9,4 +9,6 @@ export { SkeletonLoader, SkeletonCard } from "./SkeletonLoader";
 export { EmptyState } from "./EmptyState";
 export { Toast } from "./Toast";
 export { Picker } from "./Picker";
+export { MultiSelect } from "./MultiSelect";
 export { ImagePickerField } from "./ImagePickerField";
+export { ImagePickerMultiple } from "./ImagePickerMultiple";

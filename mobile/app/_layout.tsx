@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from "../src/hooks/useAuth";
 import { useRouter, useSegments } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { apiFetch } from "../src/lib/api";
+import { setActiveProfile } from "../src/lib/active-profile";
 
 function RootGuard() {
   const { token, loading } = useAuth();
@@ -29,26 +30,42 @@ function RootGuard() {
     setCheckingOnboarding(true);
 
     try {
-      const hasCompleted = await AsyncStorage.getItem("hasCompletedOnboarding");
+      // Toujours vérifier l'API d'abord (source de vérité)
+      const { data, error } = await apiFetch<{
+        user: { hasCompletedOnboarding: boolean };
+        profiles: Array<{ id: string; type: string; displayName: string }>;
+      }>("/api/auth/me");
 
-      if (hasCompleted === "true") {
-        router.replace("/(app)/(tabs)/");
+      if (error || !data?.user) {
+        // Si erreur API, déconnecter l'utilisateur
+        console.error("Error fetching user:", error);
+        await AsyncStorage.removeItem("hasCompletedOnboarding");
+        router.replace("/(auth)/login");
         return;
       }
 
-      const { data } = await apiFetch<{ user: { hasCompletedOnboarding: boolean } }>(
-        "/api/auth/me"
-      );
+      // Définir le profil actif (prendre le premier disponible)
+      if (data.profiles && data.profiles.length > 0) {
+        await setActiveProfile({
+          id: data.profiles[0].id,
+          type: data.profiles[0].type as any,
+          displayName: data.profiles[0].displayName,
+        });
+      }
 
-      if (data?.user.hasCompletedOnboarding) {
+      // Synchroniser AsyncStorage avec la valeur de l'API
+      if (data.user.hasCompletedOnboarding) {
         await AsyncStorage.setItem("hasCompletedOnboarding", "true");
         router.replace("/(app)/(tabs)/");
       } else {
+        await AsyncStorage.removeItem("hasCompletedOnboarding");
         router.replace("/(auth)/onboarding/");
       }
     } catch (err) {
       console.error("Error checking onboarding:", err);
-      router.replace("/(app)/(tabs)/");
+      // En cas d'erreur, nettoyer AsyncStorage et rediriger vers l'onboarding
+      await AsyncStorage.removeItem("hasCompletedOnboarding");
+      router.replace("/(auth)/onboarding/");
     } finally {
       setCheckingOnboarding(false);
     }

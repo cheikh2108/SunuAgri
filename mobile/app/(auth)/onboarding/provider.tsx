@@ -115,35 +115,23 @@ export default function OnboardingProviderScreen() {
 
     setLoading(true);
 
-    const formData = new FormData();
-    formData.append("type", "PROVIDER");
-    formData.append("displayName", displayName.trim());
-    formData.append("region", region);
-    formData.append("services", JSON.stringify(selectedServices));
-    if (selectedZones.length > 0) {
-      formData.append("interventionZones", JSON.stringify(selectedZones));
-    }
+    const payload: any = {
+      type: "PROVIDER",
+      displayName: displayName.trim(),
+      region,
+      services: selectedServices,
+    };
 
-    if (photoUri) {
-      const filename = photoUri.split("/").pop() ?? "profile.jpg";
-      const match = /\.(\w+)$/.exec(filename);
-      const type = match ? `image/${match[1]}` : "image/jpeg";
+    // N'inclure les champs optionnels que s'ils existent
+    if (selectedZones.length > 0) payload.interventionZones = selectedZones;
 
-      formData.append("photo", {
-        uri: photoUri,
-        name: filename,
-        type,
-      } as any);
-    }
+    // TODO: implémenter l'upload de photo plus tard
 
     const { data, error } = await apiFetch<{ profile: { id: string } }>(
       "/api/profiles",
       {
         method: "POST",
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-        body: formData as any,
+        body: JSON.stringify(payload),
       }
     );
 

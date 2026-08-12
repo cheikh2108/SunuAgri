@@ -1,5 +1,6 @@
 import { useState, useEffect, createContext, useContext } from "react";
 import { apiFetch, saveToken, deleteToken, getToken } from "../lib/api";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 interface AuthState {
   token: string | null;
@@ -90,6 +91,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   async function logout() {
     await apiFetch("/api/auth/logout", { method: "POST" });
     await deleteToken();
+    // Nettoyer l'AsyncStorage pour éviter des problèmes au prochain login
+    await AsyncStorage.removeItem("hasCompletedOnboarding");
+    await AsyncStorage.removeItem("activeProfileId");
+    await AsyncStorage.removeItem("@sunuagri_active_profile");
     setState({ token: null, loading: false });
   }
 

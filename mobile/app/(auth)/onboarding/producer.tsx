@@ -39,11 +39,80 @@ const COMMUNES: Record<string, { label: string; value: string }[]> = {
     { label: "Dakar Plateau", value: "Dakar Plateau" },
     { label: "Médina", value: "Médina" },
     { label: "HLM", value: "HLM" },
+    { label: "Grand Dakar", value: "Grand Dakar" },
+    { label: "Pikine", value: "Pikine" },
+    { label: "Guédiawaye", value: "Guédiawaye" },
+    { label: "Rufisque", value: "Rufisque" },
   ],
   Thiès: [
     { label: "Thiès Nord", value: "Thiès Nord" },
     { label: "Thiès Est", value: "Thiès Est" },
     { label: "Thiès Ouest", value: "Thiès Ouest" },
+    { label: "Mbour", value: "Mbour" },
+    { label: "Tivaouane", value: "Tivaouane" },
+  ],
+  Diourbel: [
+    { label: "Diourbel", value: "Diourbel" },
+    { label: "Bambey", value: "Bambey" },
+    { label: "Mbacké", value: "Mbacké" },
+    { label: "Touba", value: "Touba" },
+  ],
+  Fatick: [
+    { label: "Fatick", value: "Fatick" },
+    { label: "Foundiougne", value: "Foundiougne" },
+    { label: "Gossas", value: "Gossas" },
+  ],
+  Kaolack: [
+    { label: "Kaolack", value: "Kaolack" },
+    { label: "Guinguinéo", value: "Guinguinéo" },
+    { label: "Nioro du Rip", value: "Nioro du Rip" },
+  ],
+  Kaffrine: [
+    { label: "Kaffrine", value: "Kaffrine" },
+    { label: "Birkelane", value: "Birkelane" },
+    { label: "Koungheul", value: "Koungheul" },
+    { label: "Malem Hodar", value: "Malem Hodar" },
+  ],
+  Louga: [
+    { label: "Louga", value: "Louga" },
+    { label: "Kébémer", value: "Kébémer" },
+    { label: "Linguère", value: "Linguère" },
+  ],
+  Matam: [
+    { label: "Matam", value: "Matam" },
+    { label: "Kanel", value: "Kanel" },
+    { label: "Ranérou", value: "Ranérou" },
+  ],
+  "Saint-Louis": [
+    { label: "Saint-Louis", value: "Saint-Louis" },
+    { label: "Dagana", value: "Dagana" },
+    { label: "Podor", value: "Podor" },
+  ],
+  Sédhiou: [
+    { label: "Sédhiou", value: "Sédhiou" },
+    { label: "Bounkiling", value: "Bounkiling" },
+    { label: "Goudomp", value: "Goudomp" },
+  ],
+  Tambacounda: [
+    { label: "Tambacounda", value: "Tambacounda" },
+    { label: "Bakel", value: "Bakel" },
+    { label: "Goudiry", value: "Goudiry" },
+    { label: "Koumpentoum", value: "Koumpentoum" },
+  ],
+  Kédougou: [
+    { label: "Kédougou", value: "Kédougou" },
+    { label: "Salemata", value: "Salemata" },
+    { label: "Saraya", value: "Saraya" },
+  ],
+  Kolda: [
+    { label: "Kolda", value: "Kolda" },
+    { label: "Médina Yoro Foulah", value: "Médina Yoro Foulah" },
+    { label: "Vélingara", value: "Vélingara" },
+  ],
+  Ziguinchor: [
+    { label: "Ziguinchor", value: "Ziguinchor" },
+    { label: "Bignona", value: "Bignona" },
+    { label: "Oussouye", value: "Oussouye" },
   ],
 };
 
@@ -122,36 +191,22 @@ export default function OnboardingProducerScreen() {
 
     setLoading(true);
 
-    const formData = new FormData();
-    formData.append("type", "PRODUCER");
-    formData.append("displayName", displayName.trim());
-    formData.append("activityArea", activityArea);
-    formData.append("region", region);
-    formData.append("commune", commune);
-    if (selectedZones.length > 0) {
-      formData.append("interventionZones", JSON.stringify(selectedZones));
-    }
+    const payload: any = {
+      type: "PRODUCER",
+      displayName: displayName.trim(),
+      activityArea,
+      region,
+      commune,
+    };
 
-    if (photoUri) {
-      const filename = photoUri.split("/").pop() ?? "profile.jpg";
-      const match = /\.(\w+)$/.exec(filename);
-      const type = match ? `image/${match[1]}` : "image/jpeg";
-
-      formData.append("photo", {
-        uri: photoUri,
-        name: filename,
-        type,
-      } as any);
-    }
+    // TODO: implémenter l'upload de photo plus tard
+    // Pour l'instant, on ne l'envoie pas
 
     const { data, error } = await apiFetch<{ profile: { id: string } }>(
       "/api/profiles",
       {
         method: "POST",
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-        body: formData as any,
+        body: JSON.stringify(payload),
       }
     );
 
@@ -241,20 +296,22 @@ export default function OnboardingProducerScreen() {
             error={errors.region}
           />
 
-          <Picker
-            label="Commune *"
-            placeholder="Sélectionner une commune"
-            value={commune}
-            options={communeOptions}
-            onValueChange={(value) => {
-              setCommune(value);
-              if (errors.commune) {
-                setErrors((prev) => ({ ...prev, commune: "" }));
-              }
-            }}
-            error={errors.commune}
-            disabled={communeOptions.length === 0}
-          />
+          {/* Afficher Commune seulement après avoir choisi une région */}
+          {region && (
+            <Picker
+              label="Commune *"
+              placeholder="Sélectionner une commune"
+              value={commune}
+              options={communeOptions}
+              onValueChange={(value) => {
+                setCommune(value);
+                if (errors.commune) {
+                  setErrors((prev) => ({ ...prev, commune: "" }));
+                }
+              }}
+              error={errors.commune}
+            />
+          )}
 
           <View>
             <Text style={styles.label}>Zones d'intervention</Text>

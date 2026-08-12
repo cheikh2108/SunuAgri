@@ -81,5 +81,23 @@ export async function GET(req: NextRequest) {
     orderBy: { updatedAt: "desc" },
   });
 
-  return NextResponse.json(conversations);
+  // Ajouter le compteur de messages non lus pour chaque conversation
+  const conversationsWithUnread = await Promise.all(
+    conversations.map(async (conv) => {
+      const unreadCount = await prisma.message.count({
+        where: {
+          conversationId: conv.id,
+          senderProfileId: { notIn: profileIds },
+          isRead: false,
+        },
+      });
+
+      return {
+        ...conv,
+        unreadCount,
+      };
+    })
+  );
+
+  return NextResponse.json(conversationsWithUnread);
 }

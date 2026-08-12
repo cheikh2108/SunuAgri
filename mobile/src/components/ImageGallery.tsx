@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import {
   View,
+  Text,
   Image,
   ScrollView,
   Pressable,
@@ -51,7 +52,9 @@ export function ImageGallery({ images, placeholder = "field" }: Props) {
             <View style={styles.counter}>
               <Ionicons name="images-outline" size={16} color={colors.white} />
               <View style={{ width: 4 }} />
-              {selectedIndex + 1} / {displayImages.length}
+              <Text style={{ color: colors.white, fontSize: 12 }}>
+                {selectedIndex + 1} / {displayImages.length}
+              </Text>
             </View>
 
             <ScrollView

@@ -94,35 +94,23 @@ export default function OnboardingBuyerScreen() {
 
     setLoading(true);
 
-    const formData = new FormData();
-    formData.append("type", "BUYER");
-    formData.append("displayName", displayName.trim());
-    formData.append("region", region);
-    if (buyerType) formData.append("buyerType", buyerType);
-    if (selectedProducts.length > 0) {
-      formData.append("productInterests", JSON.stringify(selectedProducts));
-    }
+    const payload: any = {
+      type: "BUYER",
+      displayName: displayName.trim(),
+      region,
+    };
 
-    if (photoUri) {
-      const filename = photoUri.split("/").pop() ?? "profile.jpg";
-      const match = /\.(\w+)$/.exec(filename);
-      const type = match ? `image/${match[1]}` : "image/jpeg";
+    // N'inclure les champs optionnels que s'ils existent
+    if (buyerType) payload.buyerType = buyerType;
+    if (selectedProducts.length > 0) payload.productInterests = selectedProducts;
 
-      formData.append("photo", {
-        uri: photoUri,
-        name: filename,
-        type,
-      } as any);
-    }
+    // TODO: implémenter l'upload de photo plus tard
 
     const { data, error } = await apiFetch<{ profile: { id: string } }>(
       "/api/profiles",
       {
         method: "POST",
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-        body: formData as any,
+        body: JSON.stringify(payload),
       }
     );
 

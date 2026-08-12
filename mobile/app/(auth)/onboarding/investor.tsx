@@ -93,35 +93,23 @@ export default function OnboardingInvestorScreen() {
 
     setLoading(true);
 
-    const formData = new FormData();
-    formData.append("type", "INVESTOR");
-    formData.append("displayName", displayName.trim());
-    formData.append("region", region);
-    if (investorType) formData.append("investorType", investorType);
-    if (selectedInterests.length > 0) {
-      formData.append("investmentInterests", JSON.stringify(selectedInterests));
-    }
+    const payload: any = {
+      type: "INVESTOR",
+      displayName: displayName.trim(),
+      region,
+    };
 
-    if (photoUri) {
-      const filename = photoUri.split("/").pop() ?? "profile.jpg";
-      const match = /\.(\w+)$/.exec(filename);
-      const type = match ? `image/${match[1]}` : "image/jpeg";
+    // N'inclure les champs optionnels que s'ils existent
+    if (investorType) payload.investorType = investorType;
+    if (selectedInterests.length > 0) payload.investmentInterests = selectedInterests;
 
-      formData.append("photo", {
-        uri: photoUri,
-        name: filename,
-        type,
-      } as any);
-    }
+    // TODO: implémenter l'upload de photo plus tard
 
     const { data, error } = await apiFetch<{ profile: { id: string } }>(
       "/api/profiles",
       {
         method: "POST",
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-        body: formData as any,
+        body: JSON.stringify(payload),
       }
     );
 

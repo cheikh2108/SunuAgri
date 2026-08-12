@@ -25,6 +25,11 @@ export async function GET(
           region: true,
           commune: true,
           avgResponseHours: true,
+          _count: {
+            select: {
+              productions: true,
+            },
+          },
         },
       },
     },

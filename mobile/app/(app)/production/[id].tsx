@@ -1,18 +1,19 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   View,
   Text,
   ScrollView,
   StyleSheet,
   Pressable,
-  ActivityIndicator,
-  Alert,
+  Modal,
+  TextInput as RNTextInput,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { apiFetch } from "../../../src/lib/api";
-import { Button, ImageGallery, Badge, SkeletonLoader } from "../../../src/components";
+import { Button, ImageGallery, Badge, SkeletonLoader, Toast, TextInput } from "../../../src/components";
 import { colors, spacing, fontSize, fontWeight, radius } from "../../../src/lib/tokens";
 import { Ionicons } from "@expo/vector-icons";
+import { getActiveProfile, ActiveProfile } from "../../../src/lib/active-profile";
 
 interface ProductionDetail {
   id: string;
@@ -32,6 +33,7 @@ interface ProductionDetail {
   deliveryConditions?: string;
   description?: string;
   profile: {
+    id: string;
     displayName: string;
     verificationLevels: string[];
   };
@@ -56,28 +58,87 @@ export default function ProductionDetailScreen() {
   const [prod, setProd] = useState<ProductionDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [requesting, setRequesting] = useState(false);
+  const [contacting, setContacting] = useState(false);
+  const [activeProfile, setActiveProfile] = useState<ActiveProfile | null>(null);
+
+  // Modal state
+  const [showPurchaseModal, setShowPurchaseModal] = useState(false);
+  const [quantity, setQuantity] = useState("");
+  const [message, setMessage] = useState("");
+
+  // Toast state
+  const [toast, setToast] = useState<{ visible: boolean; message: string; type: "success" | "error" }>({
+    visible: false,
+    message: "",
+    type: "success",
+  });
 
   useEffect(() => {
-    apiFetch<ProductionDetail>(`/api/productions/${id}`).then(({ data }) => {
+    Promise.all([
+      apiFetch<ProductionDetail>(`/api/productions/${id}`),
+      getActiveProfile(),
+    ]).then(([{ data }, profile]) => {
       setProd(data);
+      setActiveProfile(profile);
       setLoading(false);
     });
   }, [id]);
 
+  const showToast = (message: string, type: "success" | "error") => {
+    setToast({ visible: true, message, type });
+  };
+
+  const hideToast = () => {
+    setToast({ ...toast, visible: false });
+  };
+
+  const openPurchaseModal = () => {
+    setQuantity(String(prod?.minOrderQty ?? 1));
+    setMessage("Je suis intéressé par cette production.");
+    setShowPurchaseModal(true);
+  };
+
   async function handlePurchaseRequest() {
+    if (!quantity || Number(quantity) <= 0) {
+      showToast("Veuillez entrer une quantité valide", "error");
+      return;
+    }
+
     setRequesting(true);
     const { error } = await apiFetch(`/api/productions/${id}/purchase-requests`, {
       method: "POST",
       body: JSON.stringify({
-        quantity: prod?.minOrderQty ?? 1,
+        quantity: Number(quantity),
         unit: prod?.quantityUnit,
         proposedPrice: prod?.price,
-        message: "Je suis intéressé par cette production.",
+        message: message.trim() || "Je suis intéressé par cette production.",
       }),
     });
     setRequesting(false);
-    if (error) Alert.alert("Erreur", error);
-    else Alert.alert("Demande envoyée", "Le producteur a été notifié.");
+
+    if (error) {
+      showToast(error, "error");
+    } else {
+      setShowPurchaseModal(false);
+      showToast("Demande envoyée avec succès", "success");
+    }
+  }
+
+  async function handleContactProducer() {
+    if (!prod?.profile.id) return;
+
+    setContacting(true);
+    const { data, error } = await apiFetch<{ conversationId: string }>("/api/conversations", {
+      method: "POST",
+      body: JSON.stringify({ participantId: prod.profile.id }),
+    });
+    setContacting(false);
+
+    if (error) {
+      showToast(error, "error");
+    } else if (data?.conversationId) {
+      router.push(`/(app)/conversation/${data.conversationId}`);
+    }
   }
 
   if (loading) {
@@ -97,17 +158,27 @@ export default function ProductionDetailScreen() {
 
   if (!prod) {
     return (
-      <View style={styles.loading}>
-        <Text style={{ color: colors.textMuted }}>Production introuvable</Text>
+      <View style={styles.screen}>
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: spacing.base }}>
+          <Text style={{ color: colors.textMuted, fontSize: fontSize.base }}>Production introuvable</Text>
+        </View>
       </View>
     );
   }
 
   const isVerified = prod.profile.verificationLevels.includes("ID_VERIFIED");
   const imageUrls = prod.medias?.filter((m) => m.mediaType === "image").map((m) => m.url) ?? [];
+  const isOwnProduction = activeProfile?.id === prod.profile.id;
 
   return (
     <View style={styles.screen}>
+      <Toast
+        visible={toast.visible}
+        message={toast.message}
+        type={toast.type}
+        onHide={hideToast}
+      />
+
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Galerie d'images */}
         <ImageGallery images={imageUrls} placeholder="production" />
@@ -209,15 +280,94 @@ export default function ProductionDetailScreen() {
         </View>
       </ScrollView>
 
-      {/* CTA fixe bas */}
-      <View style={styles.cta}>
-        <Button
-          label="Envoyer une demande"
-          onPress={handlePurchaseRequest}
-          loading={requesting}
-          style={{ flex: 1 }}
-        />
-      </View>
+      {/* CTA fixe bas - uniquement si l'utilisateur n'est pas le producteur */}
+      {!isOwnProduction && (
+        <View style={styles.cta}>
+          <Button
+            label="Demander un achat"
+            onPress={openPurchaseModal}
+            loading={requesting}
+            style={{ flex: 1 }}
+          />
+          <Button
+            label="Contacter"
+            onPress={handleContactProducer}
+            loading={contacting}
+            variant="outline"
+            style={{ flex: 1 }}
+          />
+        </View>
+      )}
+
+      {/* Modal de demande d'achat */}
+      <Modal
+        visible={showPurchaseModal}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setShowPurchaseModal(false)}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setShowPurchaseModal(false)}
+        >
+          <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Demande d'achat</Text>
+              <Pressable
+                onPress={() => setShowPurchaseModal(false)}
+                hitSlop={12}
+              >
+                <Ionicons name="close" size={24} color={colors.text} />
+              </Pressable>
+            </View>
+
+            <View style={styles.modalBody}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>
+                  Quantité ({prod?.quantityUnit})
+                </Text>
+                <RNTextInput
+                  style={styles.input}
+                  value={quantity}
+                  onChangeText={setQuantity}
+                  keyboardType="numeric"
+                  placeholder={`Min. ${prod?.minOrderQty ?? 1}`}
+                  placeholderTextColor={colors.textMuted}
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Message (optionnel)</Text>
+                <RNTextInput
+                  style={[styles.input, styles.textArea]}
+                  value={message}
+                  onChangeText={setMessage}
+                  multiline
+                  numberOfLines={4}
+                  placeholder="Décrivez votre demande..."
+                  placeholderTextColor={colors.textMuted}
+                  textAlignVertical="top"
+                />
+              </View>
+
+              <View style={styles.modalActions}>
+                <Button
+                  label="Annuler"
+                  onPress={() => setShowPurchaseModal(false)}
+                  variant="outline"
+                  style={{ flex: 1 }}
+                />
+                <Button
+                  label="Envoyer"
+                  onPress={handlePurchaseRequest}
+                  loading={requesting}
+                  style={{ flex: 1 }}
+                />
+              </View>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -342,5 +492,69 @@ const styles = StyleSheet.create({
     paddingBottom: 28,
     borderTopWidth: 1,
     borderTopColor: colors.border,
+    flexDirection: "row",
+    gap: spacing.sm,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "flex-end",
+  },
+  modalContent: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
+    paddingTop: spacing.lg,
+    maxHeight: "80%",
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: spacing.base,
+    paddingBottom: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  modalTitle: {
+    fontSize: fontSize.xl,
+    fontWeight: fontWeight.bold,
+    color: colors.text,
+  },
+  modalBody: {
+    padding: spacing.base,
+    gap: spacing.lg,
+  },
+  inputGroup: {
+    gap: spacing.xs,
+  },
+  inputLabel: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.medium,
+    color: colors.text,
+  },
+  input: {
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    fontSize: fontSize.base,
+    color: colors.text,
+  },
+  textArea: {
+    minHeight: 100,
+    paddingTop: spacing.sm,
+  },
+  modalActions: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    marginTop: spacing.md,
+  },
+  loading: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

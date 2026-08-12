@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { verifyPassword } from "@/lib/auth/password";
 import { signToken } from "@/lib/auth/jwt";
+import { normalizeSenegalPhone } from "@/lib/phone-utils";
 
 const schema = z
   .object({
@@ -22,7 +23,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Données invalides" }, { status: 400 });
   }
 
-  const { phone, email, password } = parsed.data;
+  let { phone, email, password } = parsed.data;
+
+  // Normaliser le numéro de téléphone sénégalais (accepter avec ou sans +221)
+  if (phone) {
+    const normalized = normalizeSenegalPhone(phone);
+    if (!normalized) {
+      return NextResponse.json(
+        { error: "Format de numéro invalide. Utilisez un numéro sénégalais (ex: 77 123 45 67)" },
+        { status: 400 }
+      );
+    }
+    phone = normalized;
+  }
 
   const user = await prisma.user.findFirst({
     where: phone ? { phone } : { email },

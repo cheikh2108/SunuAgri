@@ -2,63 +2,133 @@ import React, { useEffect, useState, useRef } from "react";
 import {
   View,
   Text,
+  TextInput,
   FlatList,
   StyleSheet,
-  TextInput,
-  Pressable,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Pressable,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { apiFetch } from "../../../src/lib/api";
 import { colors, spacing, fontSize, fontWeight, radius } from "../../../src/lib/tokens";
+import { getActiveProfileId } from "../../../src/lib/active-profile";
+import { EmptyState, Toast } from "../../../src/components";
+import { Ionicons } from "@expo/vector-icons";
 
 interface Message {
   id: string;
   content: string;
   createdAt: string;
-  senderProfile: { id: string; displayName: string };
+  isRead: boolean;
+  senderProfile: { id: string; displayName: string; photoUrl?: string };
+}
+
+interface Participant {
+  profile: { id: string; displayName: string; photoUrl?: string };
 }
 
 interface ConversationDetail {
   id: string;
-  participants: { profile: { id: string; displayName: string } }[];
-  messages: Message[];
+  participants: Participant[];
 }
 
 export default function ConversationScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const [conv, setConv] = useState<ConversationDetail | null>(null);
+  const [conversation, setConversation] = useState<ConversationDetail | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [currentProfileId, setCurrentProfileId] = useState<string | null>(null);
   const flatRef = useRef<FlatList>(null);
 
-  async function fetchMessages() {
-    const { data } = await apiFetch<ConversationDetail>(`/api/conversations/${id}/messages`);
-    if (data) setConv(data);
+  async function fetchConversation() {
+    const profileId = await getActiveProfileId();
+    setCurrentProfileId(profileId);
+
+    const { data: conversationsData, error: convError } = await apiFetch<ConversationDetail[]>(
+      `/api/conversations`
+    );
+
+    if (convError) {
+      setError(convError);
+      setLoading(false);
+      return;
+    }
+
+    const conv = conversationsData?.find((c) => c.id === id);
+    if (!conv) {
+      setError("Conversation introuvable");
+      setLoading(false);
+      return;
+    }
+
+    const { data: messagesData, error: messagesError } = await apiFetch<Message[]>(
+      `/api/conversations/${id}/messages`
+    );
+
+    if (messagesError) {
+      setError(messagesError);
+      setLoading(false);
+      return;
+    }
+
+    setConversation(conv);
+    if (messagesData) setMessages(messagesData);
     setLoading(false);
   }
 
-  useEffect(() => { fetchMessages(); }, [id]);
+  useEffect(() => {
+    fetchConversation();
+
+    // Rafraîchir les messages toutes les 5 secondes pour mettre à jour les statuts de lecture
+    const interval = setInterval(() => {
+      if (!sending) {
+        apiFetch<Message[]>(`/api/conversations/${id}/messages`).then(({ data }) => {
+          if (data) setMessages(data);
+        });
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [id, sending]);
 
   async function handleSend() {
-    if (!text.trim()) return;
+    if (!text.trim() || sending) return;
     const msg = text.trim();
     setText("");
     setSending(true);
-    await apiFetch(`/api/conversations/${id}/messages`, {
+
+    const { error: sendError } = await apiFetch(`/api/conversations/${id}/messages`, {
       method: "POST",
       body: JSON.stringify({ content: msg }),
     });
+
     setSending(false);
-    await fetchMessages();
-    setTimeout(() => flatRef.current?.scrollToEnd({ animated: true }), 100);
+
+    if (sendError) {
+      setError(sendError);
+      setText(msg);
+      return;
+    }
+
+    const { data: messagesData } = await apiFetch<Message[]>(
+      `/api/conversations/${id}/messages`
+    );
+    if (messagesData) {
+      setMessages(messagesData);
+      setTimeout(() => flatRef.current?.scrollToEnd({ animated: true }), 100);
+    }
   }
 
-  const other = conv?.participants[0]?.profile?.displayName ?? "Discussion";
+  const otherParticipant = conversation?.participants.find(
+    (p) => p.profile.id !== currentProfileId
+  );
+  const other = otherParticipant?.profile?.displayName ?? "Discussion";
 
   return (
     <KeyboardAvoidingView
@@ -67,67 +137,112 @@ export default function ConversationScreen() {
       keyboardVerticalOffset={0}
     >
       <View style={styles.screen}>
+        <Toast
+          visible={!!error}
+          message={error ?? ""}
+          type="error"
+          onHide={() => setError(null)}
+        />
+
         {/* Header */}
         <View style={styles.header}>
-          <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={12} accessibilityLabel="Retour">
-            <Text style={styles.backIcon}>←</Text>
+          <Pressable
+            onPress={() => router.back()}
+            style={styles.backBtn}
+            hitSlop={12}
+            accessibilityLabel="Retour"
+          >
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
           </Pressable>
           <View style={styles.headerAvatar}>
             <Text style={styles.headerAvatarText}>{other[0]?.toUpperCase()}</Text>
           </View>
-          <Text style={styles.headerName} numberOfLines={1}>{other}</Text>
+          <Text style={styles.headerName} numberOfLines={1}>
+            {other}
+          </Text>
         </View>
 
         {/* Messages */}
         {loading ? (
-          <ActivityIndicator color={colors.primary} style={{ marginTop: 48 }} />
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator color={colors.primary} size="large" />
+          </View>
+        ) : messages.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <EmptyState
+              icon="chatbubble-outline"
+              title="Aucun message"
+              description="Démarrez la conversation en envoyant un message"
+            />
+          </View>
         ) : (
           <FlatList
             ref={flatRef}
-            data={conv?.messages ?? []}
+            data={messages}
             keyExtractor={(m) => m.id}
             contentContainerStyle={styles.messageList}
-            onContentSizeChange={() => flatRef.current?.scrollToEnd()}
+            onContentSizeChange={() => flatRef.current?.scrollToEnd({ animated: false })}
+            onLayout={() => flatRef.current?.scrollToEnd({ animated: false })}
             renderItem={({ item: m }) => {
-              const isMine = m.senderProfile?.id === conv?.participants[1]?.profile?.id;
+              const isMine = m.senderProfile?.id === currentProfileId;
               return (
-                <View style={[styles.bubble, isMine ? styles.bubbleMine : styles.bubbleOther]}>
+                <View
+                  style={[styles.bubble, isMine ? styles.bubbleMine : styles.bubbleOther]}
+                >
                   <Text style={[styles.bubbleText, isMine && styles.bubbleTextMine]}>
                     {m.content}
                   </Text>
-                  <Text style={[styles.bubbleTime, isMine && { color: "rgba(255,255,255,0.7)" }]}>
-                    {new Date(m.createdAt).toLocaleTimeString("fr-SN", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </Text>
+                  <View style={styles.bubbleFooter}>
+                    <Text
+                      style={[
+                        styles.bubbleTime,
+                        isMine && { color: "rgba(255,255,255,0.7)" },
+                      ]}
+                    >
+                      {new Date(m.createdAt).toLocaleTimeString("fr-SN", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </Text>
+                    {isMine && (
+                      <View style={styles.checkmarks}>
+                        <Ionicons
+                          name="checkmark-done"
+                          size={16}
+                          color={m.isRead ? "#4FC3F7" : "rgba(255,255,255,0.7)"}
+                        />
+                      </View>
+                    )}
+                  </View>
                 </View>
               );
             }}
           />
         )}
 
-        {/* Saisie — dans la thumb zone */}
+        {/* Input */}
         <View style={styles.inputRow}>
           <TextInput
-            style={styles.input}
             value={text}
             onChangeText={setText}
             placeholder="Message…"
-            placeholderTextColor={colors.textMuted}
             multiline
             maxLength={1000}
-            returnKeyType="send"
-            onSubmitEditing={handleSend}
+            style={styles.textInput}
+            editable={!sending}
           />
           <Pressable
-            style={[styles.sendBtn, !text.trim() && styles.sendBtnDisabled]}
+            style={[styles.sendBtn, (!text.trim() || sending) && styles.sendBtnDisabled]}
             onPress={handleSend}
             disabled={!text.trim() || sending}
             accessibilityLabel="Envoyer"
             accessibilityRole="button"
           >
-            <Text style={styles.sendIcon}>➤</Text>
+            {sending ? (
+              <ActivityIndicator color={colors.white} size="small" />
+            ) : (
+              <Ionicons name="send" size={20} color={colors.white} />
+            )}
           </Pressable>
         </View>
       </View>
@@ -148,8 +263,12 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
     gap: spacing.sm,
   },
-  backBtn: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
-  backIcon: { fontSize: 20, color: colors.text },
+  backBtn: {
+    width: 44,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   headerAvatar: {
     width: 36,
     height: 36,
@@ -158,8 +277,26 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  headerAvatarText: { fontSize: fontSize.base, fontWeight: fontWeight.bold, color: colors.white },
-  headerName: { flex: 1, fontSize: fontSize.base, fontWeight: fontWeight.semibold, color: colors.text },
+  headerAvatarText: {
+    fontSize: fontSize.base,
+    fontWeight: fontWeight.bold,
+    color: colors.white,
+  },
+  headerName: {
+    flex: 1,
+    fontSize: fontSize.base,
+    fontWeight: fontWeight.semibold,
+    color: colors.text,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+  },
   messageList: {
     padding: spacing.base,
     gap: spacing.sm,
@@ -187,10 +324,19 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   bubbleTextMine: { color: colors.white },
+  bubbleFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    alignSelf: "flex-end",
+    marginTop: 2,
+  },
   bubbleTime: {
     fontSize: fontSize.xs,
     color: colors.textMuted,
-    alignSelf: "flex-end",
+  },
+  checkmarks: {
+    marginLeft: 2,
   },
   inputRow: {
     flexDirection: "row",
@@ -202,18 +348,18 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
-  input: {
+  textInput: {
     flex: 1,
     minHeight: 44,
     maxHeight: 120,
     backgroundColor: colors.background,
     borderRadius: radius.xl,
-    borderWidth: 1.5,
-    borderColor: colors.border,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     fontSize: fontSize.base,
     color: colors.text,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   sendBtn: {
     width: 44,
@@ -223,6 +369,5 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  sendBtnDisabled: { backgroundColor: colors.border },
-  sendIcon: { fontSize: 16, color: colors.white },
+  sendBtnDisabled: { opacity: 0.5 },
 });

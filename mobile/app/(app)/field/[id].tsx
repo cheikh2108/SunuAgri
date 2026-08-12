@@ -1,19 +1,20 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   View,
   Text,
   ScrollView,
   StyleSheet,
   Pressable,
-  ActivityIndicator,
-  Linking,
-  Alert,
+  Modal,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { apiFetch } from "../../../src/lib/api";
-import { Button, ImageGallery, Badge, SkeletonLoader } from "../../../src/components";
+import { Button, ImageGallery, Badge, SkeletonLoader, TextInput, Toast } from "../../../src/components";
 import { colors, spacing, fontSize, fontWeight, radius } from "../../../src/lib/tokens";
 import { Ionicons } from "@expo/vector-icons";
+import { getActiveProfileId } from "../../../src/lib/active-profile";
 
 interface FieldDetail {
   id: string;
@@ -30,13 +31,13 @@ interface FieldDetail {
   soilType?: string;
   waterAccess: boolean;
   roadAccess: boolean;
-  documentTypes: string[];
+  documentTypes?: string[];
   status: string;
   profile: {
     id: string;
     displayName: string;
-    verificationLevels: string[];
-    _count: { fields: number };
+    verificationLevels?: string[];
+    _count?: { fields: number };
   };
   visitRequests?: { status: string }[];
   medias?: { url: string; mediaType: string }[];
@@ -62,35 +63,113 @@ export default function FieldDetailScreen() {
   const router = useRouter();
   const [field, setField] = useState<FieldDetail | null>(null);
   const [loading, setLoading] = useState(true);
-  const [requesting, setRequesting] = useState(false);
+  const [currentProfileId, setCurrentProfileId] = useState<string | null>(null);
+
+  // Loading states
+  const [requestingVisit, setRequestingVisit] = useState(false);
+  const [makingOffer, setMakingOffer] = useState(false);
+  const [contacting, setContacting] = useState(false);
+
+  // Offer modal
+  const [offerModalVisible, setOfferModalVisible] = useState(false);
+  const [offerPrice, setOfferPrice] = useState("");
+  const [offerMessage, setOfferMessage] = useState("");
+  const [visitMessage, setVisitMessage] = useState("");
+
+  // Visit request modal
+  const [visitModalVisible, setVisitModalVisible] = useState(false);
+
+  // Toast
+  const [toast, setToast] = useState<{ visible: boolean; message: string; type: "success" | "error" }>({
+    visible: false,
+    message: "",
+    type: "success",
+  });
 
   useEffect(() => {
-    apiFetch<FieldDetail>(`/api/fields/${id}`).then(({ data }) => {
-      setField(data);
+    Promise.all([
+      apiFetch<FieldDetail>(`/api/fields/${id}`),
+      getActiveProfileId(),
+    ]).then(([fieldRes, profileId]) => {
+      setField(fieldRes.data ?? null);
+      setCurrentProfileId(profileId);
       setLoading(false);
     });
   }, [id]);
 
-  async function handleVisitRequest() {
-    // Date par défaut : demain
-    const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
-    setRequesting(true);
-    const { error } = await apiFetch(`/api/fields/${id}/visit-requests`, {
-      method: "POST",
-      body: JSON.stringify({
-        requestedDate: tomorrow,
-        visitorCount: 1,
-        message: "Je souhaite visiter ce champ.",
-      }),
-    });
-    setRequesting(false);
-    if (error) Alert.alert("Erreur", error);
-    else Alert.alert("Demande envoyée", "Le propriétaire a été notifié.");
+  function showToast(message: string, type: "success" | "error") {
+    setToast({ visible: true, message, type });
   }
 
-  function handleWhatsApp(phone?: string | null) {
-    if (!phone) return;
-    Linking.openURL(`https://wa.me/${phone.replace(/\D/g, "")}`);
+  async function handleVisitRequest() {
+    if (!visitMessage.trim()) {
+      showToast("Veuillez saisir un message", "error");
+      return;
+    }
+
+    setRequestingVisit(true);
+    const { error } = await apiFetch(`/api/fields/${id}/visit-requests`, {
+      method: "POST",
+      body: JSON.stringify({ message: visitMessage }),
+    });
+    setRequestingVisit(false);
+
+    if (error) {
+      showToast(error, "error");
+    } else {
+      showToast("Demande de visite envoyée", "success");
+      setVisitModalVisible(false);
+      setVisitMessage("");
+    }
+  }
+
+  async function handleMakeOffer() {
+    if (!offerPrice.trim() || !offerMessage.trim()) {
+      showToast("Veuillez remplir tous les champs", "error");
+      return;
+    }
+
+    const priceNum = parseFloat(offerPrice.replace(/\s/g, ""));
+    if (isNaN(priceNum) || priceNum <= 0) {
+      showToast("Prix invalide", "error");
+      return;
+    }
+
+    setMakingOffer(true);
+    const { error } = await apiFetch(`/api/fields/${id}/offers`, {
+      method: "POST",
+      body: JSON.stringify({
+        price: priceNum,
+        message: offerMessage,
+      }),
+    });
+    setMakingOffer(false);
+
+    if (error) {
+      showToast(error, "error");
+    } else {
+      showToast("Offre envoyée", "success");
+      setOfferModalVisible(false);
+      setOfferPrice("");
+      setOfferMessage("");
+    }
+  }
+
+  async function handleContact() {
+    if (!field?.profile.id) return;
+
+    setContacting(true);
+    const { data, error } = await apiFetch<{ id: string }>("/api/conversations", {
+      method: "POST",
+      body: JSON.stringify({ participantId: field.profile.id }),
+    });
+    setContacting(false);
+
+    if (error) {
+      showToast(error, "error");
+    } else if (data?.id) {
+      router.push(`/(app)/conversation/${data.id}`);
+    }
   }
 
   if (loading) {
@@ -110,15 +189,18 @@ export default function FieldDetailScreen() {
 
   if (!field) {
     return (
-      <View style={styles.loading}>
-        <Text style={{ color: colors.textMuted }}>Champ introuvable</Text>
+      <View style={styles.screen}>
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: spacing.base }}>
+          <Text style={{ color: colors.textMuted, fontSize: fontSize.base }}>Champ introuvable</Text>
+        </View>
       </View>
     );
   }
 
   const hasVisitAccepted = field.visitRequests?.some((v) => v.status === "ACCEPTED");
-  const isVerifiedOwner = field.profile.verificationLevels.includes("ID_VERIFIED");
+  const isVerifiedOwner = field.profile.verificationLevels?.includes("ID_VERIFIED") ?? false;
   const imageUrls = field.medias?.filter((m) => m.mediaType === "image").map((m) => m.url) ?? [];
+  const isOwner = currentProfileId === field.profile.id;
 
   return (
     <View style={styles.screen}>
@@ -168,7 +250,7 @@ export default function FieldDetailScreen() {
                     {field.price.toLocaleString("fr-SN")} F
                   </Text>
                   <Text style={styles.statLabel}>
-                    Prix {field.negotiable ? "(négociable)" : ""}
+                    Prix{field.negotiable ? " (négociable)" : ""}
                   </Text>
                 </View>
               </>
@@ -213,7 +295,7 @@ export default function FieldDetailScreen() {
           </View>
 
           {/* Disclaimer juridique — CLAUDE.md §5 */}
-          {field.documentTypes.length > 0 && (
+          {field.documentTypes && field.documentTypes.length > 0 && (
             <View style={styles.disclaimer}>
               <Text style={styles.disclaimerTitle}>📋 Documents déclarés</Text>
               <Text style={styles.disclaimerText}>
@@ -235,7 +317,7 @@ export default function FieldDetailScreen() {
             <View style={styles.ownerInfo}>
               <Text style={styles.ownerName}>{field.profile.displayName}</Text>
               <Text style={styles.ownerSub}>
-                {field.profile._count.fields} annonce{field.profile._count.fields > 1 ? "s" : ""}
+                {field.profile._count?.fields ?? 0} annonce{(field.profile._count?.fields ?? 0) > 1 ? "s" : ""}
                 {isVerifiedOwner ? "  ✓ Identité vérifiée" : ""}
               </Text>
             </View>
@@ -244,14 +326,160 @@ export default function FieldDetailScreen() {
       </ScrollView>
 
       {/* CTA fixe en bas — thumb zone */}
-      <View style={styles.cta}>
-        <Button
-          label="Demander une visite"
-          onPress={handleVisitRequest}
-          loading={requesting}
-          style={{ flex: 1 }}
-        />
-      </View>
+      {!isOwner && (
+        <View style={styles.cta}>
+          <Button
+            label="Demander une visite"
+            onPress={() => setVisitModalVisible(true)}
+            loading={requestingVisit}
+            style={{ flex: 1 }}
+          />
+          <Button
+            label="Faire une offre"
+            onPress={() => setOfferModalVisible(true)}
+            loading={makingOffer}
+            variant="secondary"
+            style={{ flex: 1 }}
+          />
+        </View>
+      )}
+
+      {!isOwner && (
+        <View style={styles.contactCta}>
+          <Button
+            label="Contacter le propriétaire"
+            onPress={handleContact}
+            loading={contacting}
+            variant="outline"
+          />
+        </View>
+      )}
+
+      {/* Visit Request Modal */}
+      <Modal
+        visible={visitModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setVisitModalVisible(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.modalOverlay}
+        >
+          <Pressable
+            style={styles.modalOverlay}
+            onPress={() => setVisitModalVisible(false)}
+          >
+            <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Demander une visite</Text>
+                <Pressable
+                  onPress={() => setVisitModalVisible(false)}
+                  hitSlop={12}
+                >
+                  <Ionicons name="close" size={24} color={colors.text} />
+                </Pressable>
+              </View>
+
+              <TextInput
+                label="Message"
+                placeholder="Pourquoi souhaitez-vous visiter ce champ ?"
+                value={visitMessage}
+                onChangeText={setVisitMessage}
+                multiline
+                numberOfLines={4}
+                style={{ height: 100, textAlignVertical: "top", paddingTop: spacing.md }}
+              />
+
+              <View style={styles.modalActions}>
+                <Button
+                  label="Annuler"
+                  onPress={() => setVisitModalVisible(false)}
+                  variant="outline"
+                  style={{ flex: 1 }}
+                />
+                <Button
+                  label="Envoyer"
+                  onPress={handleVisitRequest}
+                  loading={requestingVisit}
+                  style={{ flex: 1 }}
+                />
+              </View>
+            </Pressable>
+          </Pressable>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Offer Modal */}
+      <Modal
+        visible={offerModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setOfferModalVisible(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.modalOverlay}
+        >
+          <Pressable
+            style={styles.modalOverlay}
+            onPress={() => setOfferModalVisible(false)}
+          >
+            <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Faire une offre</Text>
+                <Pressable
+                  onPress={() => setOfferModalVisible(false)}
+                  hitSlop={12}
+                >
+                  <Ionicons name="close" size={24} color={colors.text} />
+                </Pressable>
+              </View>
+
+              <TextInput
+                label="Prix proposé (FCFA)"
+                placeholder="Ex: 5000000"
+                value={offerPrice}
+                onChangeText={setOfferPrice}
+                keyboardType="numeric"
+              />
+
+              <TextInput
+                label="Message"
+                placeholder="Détails de votre offre..."
+                value={offerMessage}
+                onChangeText={setOfferMessage}
+                multiline
+                numberOfLines={4}
+                style={{ height: 100, textAlignVertical: "top", paddingTop: spacing.md }}
+              />
+
+              <View style={styles.modalActions}>
+                <Button
+                  label="Annuler"
+                  onPress={() => setOfferModalVisible(false)}
+                  variant="outline"
+                  style={{ flex: 1 }}
+                />
+                <Button
+                  label="Envoyer"
+                  onPress={handleMakeOffer}
+                  loading={makingOffer}
+                  style={{ flex: 1 }}
+                />
+              </View>
+            </Pressable>
+          </Pressable>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Toast */}
+      <Toast
+        visible={toast.visible}
+        message={toast.message}
+        type={toast.type}
+        onHide={() => setToast({ ...toast, visible: false })}
+      />
     </View>
   );
 }
@@ -298,7 +526,7 @@ const styles = StyleSheet.create({
   content: {
     padding: spacing.base,
     gap: spacing.lg,
-    paddingBottom: 100,
+    paddingBottom: 180,
   },
   header: {
     flexDirection: "row",
@@ -385,16 +613,56 @@ const styles = StyleSheet.create({
   ownerSub: { fontSize: fontSize.sm, color: colors.textSecondary, marginTop: 2 },
   cta: {
     position: "absolute",
-    bottom: 0,
+    bottom: 60,
     left: 0,
     right: 0,
     backgroundColor: colors.surface,
     paddingHorizontal: spacing.base,
     paddingTop: spacing.md,
-    paddingBottom: 28,
+    paddingBottom: spacing.md,
     borderTopWidth: 1,
     borderTopColor: colors.border,
     flexDirection: "row",
     gap: spacing.md,
+  },
+  contactCta: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: colors.surface,
+    paddingHorizontal: spacing.base,
+    paddingTop: spacing.sm,
+    paddingBottom: 28,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "flex-end",
+  },
+  modalContent: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
+    padding: spacing.lg,
+    gap: spacing.lg,
+    maxHeight: "80%",
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  modalTitle: {
+    fontSize: fontSize.xl,
+    fontWeight: fontWeight.bold,
+    color: colors.text,
+  },
+  modalActions: {
+    flexDirection: "row",
+    gap: spacing.md,
+    marginTop: spacing.sm,
   },
 });

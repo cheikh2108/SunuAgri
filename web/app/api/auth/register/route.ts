@@ -10,7 +10,6 @@ const schema = z
     phone: z.string().regex(/^\+?[1-9]\d{7,14}$/).optional(),
     email: z.string().email().optional(),
     password: z.string().min(8),
-    displayName: z.string().min(2).max(100),
   })
   .refine((d) => d.phone || d.email, {
     message: "Un numéro de téléphone ou un email est requis",
@@ -27,7 +26,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { phone, email, password, displayName } = parsed.data;
+  const { phone, email, password } = parsed.data;
 
   // Vérifier doublon téléphone
   if (phone) {
@@ -58,9 +57,7 @@ export async function POST(req: NextRequest) {
       phone,
       email,
       passwordHash,
-      profiles: {
-        create: { type: "PRODUCER", displayName },
-      },
+      // Pas de profil créé automatiquement - l'utilisateur choisira lors de l'onboarding
     },
     select: { id: true, phone: true, email: true },
   });

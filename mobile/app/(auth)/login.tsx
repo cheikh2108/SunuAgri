@@ -13,6 +13,7 @@ import { useAuth } from "../../src/hooks/useAuth";
 import { Button } from "../../src/components/Button";
 import { TextInput } from "../../src/components/TextInput";
 import { colors, spacing, fontSize, fontWeight } from "../../src/lib/tokens";
+import { normalizeSenegalPhone, validateSenegalPhone } from "../../src/lib/phone-utils";
 
 export default function LoginScreen() {
   const { login } = useAuth();
@@ -28,9 +29,24 @@ export default function LoginScreen() {
       setError("Numéro de téléphone et mot de passe requis");
       return;
     }
+
+    // Valider le format du numéro sénégalais
+    const phoneError = validateSenegalPhone(phone.trim());
+    if (phoneError) {
+      setError(phoneError);
+      return;
+    }
+
+    // Normaliser le numéro (ajouter +221 si nécessaire)
+    const normalizedPhone = normalizeSenegalPhone(phone.trim());
+    if (!normalizedPhone) {
+      setError("Format de numéro invalide");
+      return;
+    }
+
     setError("");
     setLoading(true);
-    const result = await login(phone.trim(), password);
+    const result = await login(normalizedPhone, password);
     setLoading(false);
     if (!result.ok) setError(result.error ?? "Identifiants incorrects");
   }
@@ -61,7 +77,7 @@ export default function LoginScreen() {
           <View style={styles.form}>
             <TextInput
               label="Numéro de téléphone"
-              placeholder="+221 7X XXX XX XX"
+              placeholder="77 123 45 67"
               value={phone}
               onChangeText={setPhone}
               keyboardType="phone-pad"

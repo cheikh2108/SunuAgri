@@ -45,6 +45,68 @@ const DEPARTMENTS: Record<string, { label: string; value: string }[]> = {
     { label: "Mbour", value: "Mbour" },
     { label: "Tivaouane", value: "Tivaouane" },
   ],
+  Diourbel: [
+    { label: "Diourbel", value: "Diourbel" },
+    { label: "Bambey", value: "Bambey" },
+    { label: "Mbacké", value: "Mbacké" },
+  ],
+  Fatick: [
+    { label: "Fatick", value: "Fatick" },
+    { label: "Foundiougne", value: "Foundiougne" },
+    { label: "Gossas", value: "Gossas" },
+  ],
+  Kaolack: [
+    { label: "Kaolack", value: "Kaolack" },
+    { label: "Guinguinéo", value: "Guinguinéo" },
+    { label: "Nioro du Rip", value: "Nioro du Rip" },
+  ],
+  Kaffrine: [
+    { label: "Kaffrine", value: "Kaffrine" },
+    { label: "Birkelane", value: "Birkelane" },
+    { label: "Koungheul", value: "Koungheul" },
+    { label: "Malem Hodar", value: "Malem Hodar" },
+  ],
+  Louga: [
+    { label: "Louga", value: "Louga" },
+    { label: "Kébémer", value: "Kébémer" },
+    { label: "Linguère", value: "Linguère" },
+  ],
+  Matam: [
+    { label: "Matam", value: "Matam" },
+    { label: "Kanel", value: "Kanel" },
+    { label: "Ranérou", value: "Ranérou" },
+  ],
+  "Saint-Louis": [
+    { label: "Saint-Louis", value: "Saint-Louis" },
+    { label: "Dagana", value: "Dagana" },
+    { label: "Podor", value: "Podor" },
+  ],
+  Sédhiou: [
+    { label: "Sédhiou", value: "Sédhiou" },
+    { label: "Bounkiling", value: "Bounkiling" },
+    { label: "Goudomp", value: "Goudomp" },
+  ],
+  Tambacounda: [
+    { label: "Tambacounda", value: "Tambacounda" },
+    { label: "Bakel", value: "Bakel" },
+    { label: "Goudiry", value: "Goudiry" },
+    { label: "Koumpentoum", value: "Koumpentoum" },
+  ],
+  Kédougou: [
+    { label: "Kédougou", value: "Kédougou" },
+    { label: "Salemata", value: "Salemata" },
+    { label: "Saraya", value: "Saraya" },
+  ],
+  Kolda: [
+    { label: "Kolda", value: "Kolda" },
+    { label: "Médina Yoro Foulah", value: "Médina Yoro Foulah" },
+    { label: "Vélingara", value: "Vélingara" },
+  ],
+  Ziguinchor: [
+    { label: "Ziguinchor", value: "Ziguinchor" },
+    { label: "Bignona", value: "Bignona" },
+    { label: "Oussouye", value: "Oussouye" },
+  ],
 };
 
 const COMMUNES: Record<string, { label: string; value: string }[]> = {
@@ -52,6 +114,23 @@ const COMMUNES: Record<string, { label: string; value: string }[]> = {
     { label: "Dakar Plateau", value: "Dakar Plateau" },
     { label: "Médina", value: "Médina" },
     { label: "HLM", value: "HLM" },
+    { label: "Grand Dakar", value: "Grand Dakar" },
+    { label: "Parcelles Assainies", value: "Parcelles Assainies" },
+  ],
+  Pikine: [
+    { label: "Pikine", value: "Pikine" },
+    { label: "Thiaroye", value: "Thiaroye" },
+    { label: "Diamaguène", value: "Diamaguène" },
+  ],
+  Guédiawaye: [
+    { label: "Guédiawaye", value: "Guédiawaye" },
+    { label: "Golf Sud", value: "Golf Sud" },
+    { label: "Médina Gounass", value: "Médina Gounass" },
+  ],
+  Rufisque: [
+    { label: "Rufisque", value: "Rufisque" },
+    { label: "Bargny", value: "Bargny" },
+    { label: "Diamniadio", value: "Diamniadio" },
   ],
   Thiès: [
     { label: "Thiès Nord", value: "Thiès Nord" },
@@ -61,6 +140,157 @@ const COMMUNES: Record<string, { label: string; value: string }[]> = {
   Mbour: [
     { label: "Mbour", value: "Mbour" },
     { label: "Saly", value: "Saly" },
+    { label: "Ngaparou", value: "Ngaparou" },
+  ],
+  Tivaouane: [
+    { label: "Tivaouane", value: "Tivaouane" },
+    { label: "Mékhé", value: "Mékhé" },
+  ],
+  // Diourbel - Départements
+  Diourbel: [
+    { label: "Diourbel", value: "Diourbel" },
+    { label: "Ndoulo", value: "Ndoulo" },
+  ],
+  Bambey: [
+    { label: "Bambey", value: "Bambey" },
+    { label: "Dinguiraye", value: "Dinguiraye" },
+  ],
+  Mbacké: [
+    { label: "Mbacké", value: "Mbacké" },
+    { label: "Touba", value: "Touba" },
+    { label: "Darou Mousty", value: "Darou Mousty" },
+  ],
+  // Fatick - Départements
+  Fatick: [
+    { label: "Fatick", value: "Fatick" },
+    { label: "Dioffior", value: "Dioffior" },
+  ],
+  Foundiougne: [
+    { label: "Foundiougne", value: "Foundiougne" },
+    { label: "Toubacouta", value: "Toubacouta" },
+  ],
+  Gossas: [
+    { label: "Gossas", value: "Gossas" },
+    { label: "Colobane", value: "Colobane" },
+  ],
+  // Kaolack - Départements
+  Kaolack: [
+    { label: "Kaolack", value: "Kaolack" },
+    { label: "Ndoffane", value: "Ndoffane" },
+  ],
+  Guinguinéo: [
+    { label: "Guinguinéo", value: "Guinguinéo" },
+  ],
+  "Nioro du Rip": [
+    { label: "Nioro du Rip", value: "Nioro du Rip" },
+    { label: "Keur Samba Kane", value: "Keur Samba Kane" },
+  ],
+  // Kaffrine - Départements
+  Kaffrine: [
+    { label: "Kaffrine", value: "Kaffrine" },
+  ],
+  Birkelane: [
+    { label: "Birkelane", value: "Birkelane" },
+  ],
+  Koungheul: [
+    { label: "Koungheul", value: "Koungheul" },
+    { label: "Lour Escale", value: "Lour Escale" },
+  ],
+  "Malem Hodar": [
+    { label: "Malem Hodar", value: "Malem Hodar" },
+  ],
+  // Louga - Départements
+  Louga: [
+    { label: "Louga", value: "Louga" },
+    { label: "Coki", value: "Coki" },
+  ],
+  Kébémer: [
+    { label: "Kébémer", value: "Kébémer" },
+    { label: "Ndande", value: "Ndande" },
+  ],
+  Linguère: [
+    { label: "Linguère", value: "Linguère" },
+    { label: "Dahra", value: "Dahra" },
+  ],
+  // Matam - Départements
+  Matam: [
+    { label: "Matam", value: "Matam" },
+    { label: "Ourossogui", value: "Ourossogui" },
+  ],
+  Kanel: [
+    { label: "Kanel", value: "Kanel" },
+    { label: "Semmé", value: "Semmé" },
+  ],
+  Ranérou: [
+    { label: "Ranérou", value: "Ranérou" },
+  ],
+  // Saint-Louis - Départements
+  "Saint-Louis": [
+    { label: "Saint-Louis", value: "Saint-Louis" },
+    { label: "Rao", value: "Rao" },
+  ],
+  Dagana: [
+    { label: "Dagana", value: "Dagana" },
+    { label: "Richard Toll", value: "Richard Toll" },
+  ],
+  Podor: [
+    { label: "Podor", value: "Podor" },
+    { label: "Ndioum", value: "Ndioum" },
+  ],
+  // Sédhiou - Départements
+  Sédhiou: [
+    { label: "Sédhiou", value: "Sédhiou" },
+  ],
+  Bounkiling: [
+    { label: "Bounkiling", value: "Bounkiling" },
+  ],
+  Goudomp: [
+    { label: "Goudomp", value: "Goudomp" },
+  ],
+  // Tambacounda - Départements
+  Tambacounda: [
+    { label: "Tambacounda", value: "Tambacounda" },
+    { label: "Missirah", value: "Missirah" },
+  ],
+  Bakel: [
+    { label: "Bakel", value: "Bakel" },
+  ],
+  Goudiry: [
+    { label: "Goudiry", value: "Goudiry" },
+  ],
+  Koumpentoum: [
+    { label: "Koumpentoum", value: "Koumpentoum" },
+  ],
+  // Kédougou - Départements
+  Kédougou: [
+    { label: "Kédougou", value: "Kédougou" },
+  ],
+  Salemata: [
+    { label: "Salemata", value: "Salemata" },
+  ],
+  Saraya: [
+    { label: "Saraya", value: "Saraya" },
+  ],
+  // Kolda - Départements
+  Kolda: [
+    { label: "Kolda", value: "Kolda" },
+  ],
+  "Médina Yoro Foulah": [
+    { label: "Médina Yoro Foulah", value: "Médina Yoro Foulah" },
+  ],
+  Vélingara: [
+    { label: "Vélingara", value: "Vélingara" },
+  ],
+  // Ziguinchor - Départements
+  Ziguinchor: [
+    { label: "Ziguinchor", value: "Ziguinchor" },
+  ],
+  Bignona: [
+    { label: "Bignona", value: "Bignona" },
+    { label: "Diouloulou", value: "Diouloulou" },
+  ],
+  Oussouye: [
+    { label: "Oussouye", value: "Oussouye" },
   ],
 };
 
@@ -78,7 +308,11 @@ export default function OnboardingOwnerScreen() {
   const [loading, setLoading] = useState(false);
 
   const departmentOptions = region ? DEPARTMENTS[region] ?? [] : [];
-  const communeOptions = department ? COMMUNES[department] ?? [] : [];
+  const communeOptions = department
+    ? COMMUNES[department] ?? []
+    : region
+      ? COMMUNES[region] ?? []
+      : [];
 
   function validate(): boolean {
     const newErrors: Record<string, string> = {};
@@ -88,6 +322,10 @@ export default function OnboardingOwnerScreen() {
     }
     if (!region) {
       newErrors.region = "La région est requise";
+    }
+    // Si des départements existent pour cette région, le département est obligatoire
+    if (departmentOptions.length > 0 && !department) {
+      newErrors.department = "Le département est requis";
     }
     if (!commune) {
       newErrors.commune = "La commune est requise";
@@ -102,34 +340,24 @@ export default function OnboardingOwnerScreen() {
 
     setLoading(true);
 
-    const formData = new FormData();
-    formData.append("type", "OWNER");
-    formData.append("displayName", displayName.trim());
-    formData.append("region", region);
-    if (department) formData.append("department", department);
-    formData.append("commune", commune);
-    if (locality.trim()) formData.append("locality", locality.trim());
+    const payload: any = {
+      type: "OWNER",
+      displayName: displayName.trim(),
+      region,
+      commune,
+    };
 
-    if (photoUri) {
-      const filename = photoUri.split("/").pop() ?? "profile.jpg";
-      const match = /\.(\w+)$/.exec(filename);
-      const type = match ? `image/${match[1]}` : "image/jpeg";
+    // N'inclure les champs optionnels que s'ils existent
+    if (department) payload.department = department;
+    if (locality.trim()) payload.locality = locality.trim();
 
-      formData.append("photo", {
-        uri: photoUri,
-        name: filename,
-        type,
-      } as any);
-    }
+    // TODO: implémenter l'upload de photo plus tard
 
-    const { data, error } = await apiFetch<{ profile: { id: string } }>(
+    const { data, error} = await apiFetch<{ profile: { id: string } }>(
       "/api/profiles",
       {
         method: "POST",
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-        body: formData as any,
+        body: JSON.stringify(payload),
       }
     );
 
@@ -208,40 +436,49 @@ export default function OnboardingOwnerScreen() {
 
           {departmentOptions.length > 0 && (
             <Picker
-              label="Département"
+              label="Département *"
               placeholder="Sélectionner un département"
               value={department}
               options={departmentOptions}
               onValueChange={(value) => {
                 setDepartment(value);
                 setCommune("");
+                if (errors.department) {
+                  setErrors((prev) => ({ ...prev, department: "" }));
+                }
               }}
+              error={errors.department}
             />
           )}
 
-          <Picker
-            label="Commune *"
-            placeholder="Sélectionner une commune"
-            value={commune}
-            options={communeOptions}
-            onValueChange={(value) => {
-              setCommune(value);
-              if (errors.commune) {
-                setErrors((prev) => ({ ...prev, commune: "" }));
-              }
-            }}
-            error={errors.commune}
-            disabled={!department && communeOptions.length === 0}
-          />
+          {/* Afficher Commune seulement si région choisie ET (département choisi OU pas de départements) */}
+          {region && (departmentOptions.length === 0 || department) && (
+            <Picker
+              label="Commune *"
+              placeholder="Sélectionner une commune"
+              value={commune}
+              options={communeOptions}
+              onValueChange={(value) => {
+                setCommune(value);
+                if (errors.commune) {
+                  setErrors((prev) => ({ ...prev, commune: "" }));
+                }
+              }}
+              error={errors.commune}
+            />
+          )}
 
-          <TextInput
-            label="Localité"
-            placeholder="Mbour 2"
-            value={locality}
-            onChangeText={setLocality}
-            returnKeyType="done"
-            onSubmitEditing={handleSubmit}
-          />
+          {/* Afficher Localité seulement après avoir choisi une commune */}
+          {commune && (
+            <TextInput
+              label="Localité"
+              placeholder="Mbour 2"
+              value={locality}
+              onChangeText={setLocality}
+              returnKeyType="done"
+              onSubmitEditing={handleSubmit}
+            />
+          )}
 
           {errors.submit && (
             <View style={styles.errorBox}>

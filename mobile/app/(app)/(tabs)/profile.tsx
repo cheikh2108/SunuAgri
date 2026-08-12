@@ -1,13 +1,13 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   View,
   Text,
   ScrollView,
   StyleSheet,
   Pressable,
-  ActivityIndicator,
   Alert,
 } from "react-native";
+import { useRouter } from "expo-router";
 import { useAuth } from "../../../src/hooks/useAuth";
 import { apiFetch } from "../../../src/lib/api";
 import { Button, Badge, SkeletonLoader, EmptyState } from "../../../src/components";
@@ -42,6 +42,7 @@ const VERIF_LABELS: Record<string, string> = {
 };
 
 export default function ProfileScreen() {
+  const router = useRouter();
   const { logout } = useAuth();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -84,11 +85,20 @@ export default function ProfileScreen() {
           </View>
         </View>
       ) : !profile ? (
-        <EmptyState
-          icon="person-outline"
-          title="Aucun profil"
-          description="Impossible de charger votre profil"
-        />
+        <>
+          <EmptyState
+            icon="person-outline"
+            title="Aucun profil"
+            description="Impossible de charger votre profil. Veuillez vous reconnecter."
+          />
+          <View style={styles.actions}>
+            <Button
+              label="Se déconnecter"
+              variant="destructive"
+              onPress={handleLogout}
+            />
+          </View>
+        </>
       ) : (
         <>
           {profile && (
@@ -137,6 +147,35 @@ export default function ProfileScreen() {
                 </View>
               </View>
             </>
+          )}
+
+          {/* Mes annonces */}
+          {(profile.type === "OWNER" || profile.type === "PRODUCER") && (
+            <View style={styles.menu}>
+              <View style={styles.menuHeader}>
+                <Text style={styles.menuHeaderText}>Mes annonces</Text>
+              </View>
+              {profile.type === "OWNER" && (
+                <Pressable
+                  style={styles.menuItem}
+                  onPress={() => router.push("/(app)/my-fields")}
+                >
+                  <Ionicons name="list-outline" size={22} color={colors.text} />
+                  <Text style={styles.menuText}>Mes terres</Text>
+                  <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+                </Pressable>
+              )}
+              {profile.type === "PRODUCER" && (
+                <Pressable
+                  style={styles.menuItem}
+                  onPress={() => router.push("/(app)/my-productions")}
+                >
+                  <Ionicons name="list-outline" size={22} color={colors.text} />
+                  <Text style={styles.menuText}>Mes productions</Text>
+                  <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+                </Pressable>
+              )}
+            </View>
           )}
 
           {/* Menu options */}
@@ -259,6 +298,20 @@ const styles = StyleSheet.create({
     fontSize: fontSize.base,
     color: colors.text,
     fontWeight: fontWeight.medium,
+  },
+  menuHeader: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.base,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
+  },
+  menuHeaderText: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+    color: colors.textSecondary,
+    textTransform: "uppercase" as const,
+    letterSpacing: 0.5,
   },
   statsRow: {
     flexDirection: "row",
