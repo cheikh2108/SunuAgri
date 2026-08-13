@@ -11,7 +11,8 @@ import { useRouter } from "expo-router";
 import { useAuth } from "../../../src/hooks/useAuth";
 import { apiFetch } from "../../../src/lib/api";
 import { Button, Badge, SkeletonLoader, EmptyState } from "../../../src/components";
-import { colors, spacing, fontSize, fontWeight, radius } from "../../../src/lib/tokens";
+import { spacing, fontSize, fontWeight, radius } from "../../../src/lib/tokens";
+import { useTheme } from "../../../src/contexts/ThemeContext";
 import { Ionicons } from "@expo/vector-icons";
 
 interface Profile {
@@ -42,6 +43,8 @@ const VERIF_LABELS: Record<string, string> = {
 };
 
 export default function ProfileScreen() {
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   const router = useRouter();
   const { logout } = useAuth();
   const [profiles, setProfiles] = useState<Profile[]>([]);
@@ -211,7 +214,7 @@ export default function ProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   container: { paddingBottom: 40 },
   header: {

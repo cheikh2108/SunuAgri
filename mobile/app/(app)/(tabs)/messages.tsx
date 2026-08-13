@@ -10,7 +10,8 @@ import {
 import { useRouter, useFocusEffect } from "expo-router";
 import { apiFetch } from "../../../src/lib/api";
 import { EmptyState, SkeletonLoader, Toast } from "../../../src/components";
-import { colors, spacing, fontSize, fontWeight, radius } from "../../../src/lib/tokens";
+import { spacing, fontSize, fontWeight, radius } from "../../../src/lib/tokens";
+import { useTheme } from "../../../src/contexts/ThemeContext";
 import { Ionicons } from "@expo/vector-icons";
 import { getActiveProfileId } from "../../../src/lib/active-profile";
 import { useCallback } from "react";
@@ -24,6 +25,8 @@ interface Conversation {
 }
 
 export default function MessagesScreen() {
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -160,7 +163,7 @@ export default function MessagesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   header: {
     backgroundColor: colors.surface,

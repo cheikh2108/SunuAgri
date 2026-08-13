@@ -1,9 +1,11 @@
 import { Tabs } from "expo-router";
 import { View, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { colors, fontSize } from "../../../src/lib/tokens";
+import { useTheme } from "../../../src/contexts/ThemeContext";
+import { fontSize } from "../../../src/lib/tokens";
 
 function TabIcon({ name, focused }: { name: string; focused: boolean }) {
+  const { colors } = useTheme();
   const icons: Record<string, keyof typeof Ionicons.glyphMap> = {
     index: "leaf",
     market: "cart",
@@ -12,7 +14,10 @@ function TabIcon({ name, focused }: { name: string; focused: boolean }) {
   };
 
   return (
-    <View style={[styles.icon, focused && styles.iconActive]}>
+    <View style={[
+      { padding: 4, borderRadius: 8 },
+      focused && { backgroundColor: colors.successLight }
+    ]}>
       <Ionicons
         name={icons[name]}
         size={24}
@@ -23,14 +28,26 @@ function TabIcon({ name, focused }: { name: string; focused: boolean }) {
 }
 
 export default function TabLayout() {
+  const { colors } = useTheme();
+
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textMuted,
-        tabBarStyle: styles.tabBar,
-        tabBarLabelStyle: styles.tabLabel,
+        tabBarStyle: {
+          backgroundColor: colors.surface,
+          borderTopColor: colors.border,
+          borderTopWidth: 1,
+          height: 64,
+          paddingBottom: 8,
+          paddingTop: 6,
+        },
+        tabBarLabelStyle: {
+          fontSize: fontSize.xs,
+          fontWeight: "600",
+        },
       }}
     >
       <Tabs.Screen
@@ -64,25 +81,3 @@ export default function TabLayout() {
     </Tabs>
   );
 }
-
-const styles = StyleSheet.create({
-  tabBar: {
-    backgroundColor: colors.surface,
-    borderTopColor: colors.border,
-    borderTopWidth: 1,
-    height: 64,
-    paddingBottom: 8,
-    paddingTop: 6,
-  },
-  tabLabel: {
-    fontSize: fontSize.xs,
-    fontWeight: "600",
-  },
-  icon: {
-    padding: 4,
-    borderRadius: 8,
-  },
-  iconActive: {
-    backgroundColor: colors.successLight,
-  },
-});

@@ -15,7 +15,8 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { apiFetch } from "../../../src/lib/api";
 import { ImageCard, SearchBar, SkeletonCard, EmptyState, Picker } from "../../../src/components";
-import { colors, spacing, fontSize, fontWeight, radius } from "../../../src/lib/tokens";
+import { spacing, fontSize, fontWeight, radius } from "../../../src/lib/tokens";
+import { useTheme } from "../../../src/contexts/ThemeContext";
 import { useFavorites } from "../../../src/hooks/useFavorites";
 
 interface Field {
@@ -75,6 +76,8 @@ interface Filters {
 }
 
 export default function FieldsScreen() {
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   const [fields, setFields] = useState<Field[]>([]);
   const [filteredFields, setFilteredFields] = useState<Field[]>([]);
   const [loading, setLoading] = useState(true);
@@ -417,7 +420,7 @@ export default function FieldsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: colors.background,
