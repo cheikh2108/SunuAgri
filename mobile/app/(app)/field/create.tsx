@@ -17,7 +17,8 @@ import { Toast } from "../../../src/components/Toast";
 import { ImagePickerMultiple } from "../../../src/components/ImagePickerMultiple";
 import { apiFetch } from "../../../src/lib/api";
 import { uploadImages } from "../../../src/lib/upload";
-import { colors, spacing, fontSize, fontWeight, radius } from "../../../src/lib/tokens";
+import { spacing, fontSize, fontWeight, radius } from "../../../src/lib/tokens";
+import { useTheme } from "../../../src/contexts/ThemeContext";
 import { REGIONS, DEPARTMENTS, COMMUNES } from "../../../src/lib/geographic-data";
 
 const OPERATION_TYPES = [
@@ -53,6 +54,8 @@ const SOIL_TYPES = [
 
 export default function CreateFieldScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -459,7 +462,7 @@ export default function CreateFieldScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   container: {
     flexGrow: 1,
     backgroundColor: colors.background,

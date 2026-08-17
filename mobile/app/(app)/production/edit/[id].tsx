@@ -11,7 +11,8 @@ import {
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Button, TextInput, Picker, Toast } from "../../../../src/components";
 import { apiFetch } from "../../../../src/lib/api";
-import { colors, spacing, fontSize, fontWeight, radius } from "../../../../src/lib/tokens";
+import { spacing, fontSize, fontWeight, radius } from "../../../../src/lib/tokens";
+import { useTheme } from "../../../src/contexts/ThemeContext";
 
 const REGIONS = [
   { label: "Dakar", value: "Dakar" },
@@ -105,6 +106,8 @@ interface ProductionDetail {
 
 export default function EditProductionScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   const { id } = useLocalSearchParams<{ id: string }>();
 
   const [initialLoading, setInitialLoading] = useState(true);
@@ -482,7 +485,7 @@ export default function EditProductionScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   container: {
     flexGrow: 1,
     backgroundColor: colors.background,

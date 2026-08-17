@@ -15,7 +15,8 @@ import { TextInput } from "../../../src/components/TextInput";
 import { Picker } from "../../../src/components/Picker";
 import { ImagePickerField } from "../../../src/components/ImagePickerField";
 import { apiFetch } from "../../../src/lib/api";
-import { colors, spacing, fontSize, fontWeight, radius } from "../../../src/lib/tokens";
+import { spacing, fontSize, fontWeight, radius } from "../../../src/lib/tokens";
+import { useTheme } from "../../src/contexts/ThemeContext";
 
 const REGIONS = [
   { label: "Dakar", value: "Dakar" },
@@ -71,6 +72,8 @@ const INTERVENTION_ZONES = [
 
 export default function OnboardingProviderScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
 
   const [displayName, setDisplayName] = useState("");
   const [photoUri, setPhotoUri] = useState<string | null>(null);
@@ -296,7 +299,7 @@ export default function OnboardingProviderScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   container: {
     flexGrow: 1,
     backgroundColor: colors.background,

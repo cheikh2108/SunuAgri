@@ -12,11 +12,14 @@ import { Link, useRouter } from "expo-router";
 import { useAuth } from "../../src/hooks/useAuth";
 import { Button } from "../../src/components/Button";
 import { TextInput } from "../../src/components/TextInput";
-import { colors, spacing, fontSize, fontWeight } from "../../src/lib/tokens";
+import { spacing, fontSize, fontWeight } from "../../src/lib/tokens";
+import { useTheme } from "../../src/contexts/ThemeContext";
 import { normalizeSenegalPhone, validateSenegalPhone } from "../../src/lib/phone-utils";
 
 export default function LoginScreen() {
   const { login } = useAuth();
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   const router = useRouter();
 
   const [phone, setPhone] = useState("");
@@ -138,7 +141,7 @@ export default function LoginScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   container: {
     flexGrow: 1,
     backgroundColor: colors.background,

@@ -7,7 +7,8 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { colors, spacing, fontSize, fontWeight, radius } from "../../../src/lib/tokens";
+import { spacing, fontSize, fontWeight, radius } from "../../../src/lib/tokens";
+import { useTheme } from "../../src/contexts/ThemeContext";
 
 interface ProfileOption {
   icon: string;
@@ -57,6 +58,8 @@ const profileOptions: ProfileOption[] = [
 
 export default function OnboardingChoiceScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
 
   return (
     <ScrollView
@@ -104,7 +107,7 @@ export default function OnboardingChoiceScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,

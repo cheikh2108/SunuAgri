@@ -14,7 +14,8 @@ import {
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { apiFetch } from "../../../src/lib/api";
-import { colors, spacing, fontSize, fontWeight, radius } from "../../../src/lib/tokens";
+import { spacing, fontSize, fontWeight, radius } from "../../../src/lib/tokens";
+import { useTheme } from "../../../src/contexts/ThemeContext";
 import { getActiveProfileId } from "../../../src/lib/active-profile";
 import { EmptyState, Toast } from "../../../src/components";
 import { Ionicons } from "@expo/vector-icons";
@@ -38,6 +39,8 @@ interface ConversationDetail {
 
 export default function ConversationScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   const router = useRouter();
   const [conversation, setConversation] = useState<ConversationDetail | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -280,7 +283,7 @@ export default function ConversationScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: "row",

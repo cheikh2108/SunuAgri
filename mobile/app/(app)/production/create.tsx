@@ -15,7 +15,8 @@ import { Toast } from "../../../src/components/Toast";
 import { ImagePickerMultiple } from "../../../src/components/ImagePickerMultiple";
 import { apiFetch } from "../../../src/lib/api";
 import { uploadImages } from "../../../src/lib/upload";
-import { colors, spacing, fontSize, fontWeight, radius } from "../../../src/lib/tokens";
+import { spacing, fontSize, fontWeight, radius } from "../../../src/lib/tokens";
+import { useTheme } from "../../../src/contexts/ThemeContext";
 
 const REGIONS = [
   { label: "Dakar", value: "Dakar" },
@@ -90,6 +91,8 @@ const QUALITY_OPTIONS = [
 
 export default function CreateProductionScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
 
   const [name, setName] = useState("");
   const [category, setCategory] = useState("");
@@ -461,7 +464,7 @@ export default function CreateProductionScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   container: {
     flexGrow: 1,
     backgroundColor: colors.background,

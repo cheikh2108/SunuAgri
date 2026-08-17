@@ -11,12 +11,15 @@ import { useRouter } from "expo-router";
 import { useAuth } from "../../src/hooks/useAuth";
 import { Button } from "../../src/components/Button";
 import { TextInput } from "../../src/components/TextInput";
-import { colors, spacing, fontSize, fontWeight, radius } from "../../src/lib/tokens";
+import { spacing, fontSize, fontWeight, radius } from "../../src/lib/tokens";
+import { useTheme } from "../../src/contexts/ThemeContext";
 
 type Step = "phone" | "code";
 
 export default function OtpLoginScreen() {
   const { sendOtp, loginWithOtp } = useAuth();
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   const router = useRouter();
 
   const [step, setStep] = useState<Step>("phone");
@@ -119,7 +122,7 @@ export default function OtpLoginScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   container: {
     flexGrow: 1,
     backgroundColor: colors.background,
