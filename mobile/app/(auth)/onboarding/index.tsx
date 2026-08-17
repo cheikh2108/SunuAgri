@@ -8,7 +8,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { spacing, fontSize, fontWeight, radius } from "../../../src/lib/tokens";
-import { useTheme } from "../../src/contexts/ThemeContext";
+import { useTheme } from "../../../src/contexts/ThemeContext";
 
 interface ProfileOption {
   icon: string;

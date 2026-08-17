@@ -15,7 +15,7 @@ import { Picker } from "../../../src/components/Picker";
 import { ImagePickerField } from "../../../src/components/ImagePickerField";
 import { apiFetch } from "../../../src/lib/api";
 import { spacing, fontSize, fontWeight } from "../../../src/lib/tokens";
-import { useTheme } from "../../src/contexts/ThemeContext";
+import { useTheme } from "../../../src/contexts/ThemeContext";
 
 const REGIONS = [
   { label: "Dakar", value: "Dakar" },
