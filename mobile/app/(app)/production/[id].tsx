@@ -11,7 +11,8 @@ import {
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { apiFetch } from "../../../src/lib/api";
 import { Button, ImageGallery, Badge, SkeletonLoader, Toast, TextInput } from "../../../src/components";
-import { colors, spacing, fontSize, fontWeight, radius } from "../../../src/lib/tokens";
+import { spacing, fontSize, fontWeight, radius } from "../../../src/lib/tokens";
+import { useTheme } from "../../../src/contexts/ThemeContext";
 import { Ionicons } from "@expo/vector-icons";
 import { getActiveProfile, ActiveProfile } from "../../../src/lib/active-profile";
 import { shareAnnonce } from "../../../src/lib/share";
@@ -56,6 +57,8 @@ const OFFER_LABELS: Record<string, string> = {
 export default function ProductionDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   const [prod, setProd] = useState<ProductionDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [requesting, setRequesting] = useState(false);
@@ -396,6 +399,8 @@ export default function ProductionDetailScreen() {
 }
 
 function DetailRow({ label, value }: { label: string; value: string }) {
+  const { colors } = useTheme();
+  const detailStyles = getDetailStyles(colors);
   return (
     <View style={detailStyles.row}>
       <Text style={detailStyles.label}>{label}</Text>
@@ -404,7 +409,7 @@ function DetailRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-const detailStyles = StyleSheet.create({
+const getDetailStyles = (colors: any) => StyleSheet.create({
   row: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -417,7 +422,7 @@ const detailStyles = StyleSheet.create({
   value: { fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: colors.text, flex: 1, textAlign: "right" },
 });
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   floatingBackBtn: {
     position: "absolute",

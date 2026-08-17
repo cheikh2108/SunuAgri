@@ -12,7 +12,8 @@ import {
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { apiFetch } from "../../../src/lib/api";
 import { Button, ImageGallery, Badge, SkeletonLoader, TextInput, Toast } from "../../../src/components";
-import { colors, spacing, fontSize, fontWeight, radius } from "../../../src/lib/tokens";
+import { spacing, fontSize, fontWeight, radius } from "../../../src/lib/tokens";
+import { useTheme } from "../../../src/contexts/ThemeContext";
 import { Ionicons } from "@expo/vector-icons";
 import { getActiveProfileId } from "../../../src/lib/active-profile";
 import { shareAnnonce } from "../../../src/lib/share";
@@ -62,6 +63,8 @@ const OP_LABELS: Record<string, string> = {
 export default function FieldDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   const [field, setField] = useState<FieldDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentProfileId, setCurrentProfileId] = useState<string | null>(null);
@@ -506,6 +509,8 @@ export default function FieldDetailScreen() {
 }
 
 function Chip({ label }: { label: string }) {
+  const { colors } = useTheme();
+  const chipStyles = getChipStyles(colors);
   return (
     <View style={chipStyles.chip}>
       <Text style={chipStyles.text}>{label}</Text>
@@ -513,7 +518,7 @@ function Chip({ label }: { label: string }) {
   );
 }
 
-const chipStyles = StyleSheet.create({
+const getChipStyles = (colors: any) => StyleSheet.create({
   chip: {
     backgroundColor: colors.surfaceAlt,
     borderRadius: radius.full,
@@ -526,7 +531,7 @@ const chipStyles = StyleSheet.create({
   },
 });
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   floatingBackBtn: {
     position: "absolute",
